@@ -14,6 +14,10 @@ urlpatterns = [
     path('patients/<int:pk>/edit/', views.patient_edit, name='patient_edit'),
     path('patients/<int:pk>/status/', views.patient_set_status, name='patient_set_status'),
 
+    path('api/place/', views.api_place, name='api_place'),
+    path('api/unassign/', views.api_unassign, name='api_unassign'),
+    path('api/toggle-fixed/', views.api_toggle_fixed, name='api_toggle_fixed'),
+
     path('stats/', views.stats, name='stats'),
     path('import/', views.import_excel, name='import'),
 ]

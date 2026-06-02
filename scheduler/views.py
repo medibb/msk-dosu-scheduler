@@ -1,11 +1,16 @@
+import json
+
 from django.contrib import messages
 from django.db.models import Q
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.views.decorators.http import require_POST
 
 from .forms import PatientForm
-from .models import Patient, Settings, Status, Therapist
+from .models import Appointment, Patient, Settings, Status, Therapist
+from .services import schedule as sch
 
 # 상태 흐름: 다음 단계로 한 번에 전진
 NEXT_STATUS = {
@@ -16,11 +21,73 @@ NEXT_STATUS = {
 
 
 def schedule(request):
-    """주간 시간표 그리드(상세 구현은 3.0). 현재는 골격."""
-    settings_obj = Settings.load()
+    """주간 시간표 그리드. 치료사별 보기 + 대기자 드래그 소스."""
+    therapists = list(Therapist.objects.filter(is_active=True))
+    if not therapists:
+        return render(request, 'schedule.html', {'no_therapist': True})
+
+    tid = request.GET.get('therapist')
+    current = next((t for t in therapists if str(t.id) == tid), therapists[0])
+
+    grid = sch.build_grid(current)
+    # 드래그 소스: 아직 배정 안 된(대기중) 환자 + 이 치료사 배정 환자
+    waitlist = Patient.objects.filter(status=Status.WAITING).order_by('-prescription_date')[:100]
+
     return render(request, 'schedule.html', {
-        'time_slots': settings_obj.time_slots,
+        'therapists': therapists,
+        'current': current,
+        'grid': grid,
+        'weekdays': ['월', '화', '수', '목', '금'],
+        'waitlist': waitlist,
     })
+
+
+def _json_patient_card(appt):
+    p = appt.patient
+    return {
+        'appointment_id': appt.pk,
+        'patient_id': p.pk,
+        'name': p.name,
+        'memo': p.memo,
+        'sessions': f'{p.session_count}/{p.target_sessions}',
+        'is_fixed': appt.is_fixed,
+    }
+
+
+@require_POST
+def api_place(request):
+    """대기자→칸 배정 또는 칸 이동. JSON: patient_id, therapist_id, weekday, slot_index, appointment_id?"""
+    try:
+        data = json.loads(request.body)
+        patient = get_object_or_404(Patient, pk=data['patient_id'])
+        therapist = get_object_or_404(Therapist, pk=data['therapist_id'])
+        appt = None
+        if data.get('appointment_id'):
+            appt = get_object_or_404(Appointment, pk=data['appointment_id'])
+        appt = sch.place(patient, therapist,
+                         int(data['weekday']), int(data['slot_index']), appointment=appt)
+    except sch.ScheduleConflict as e:
+        return JsonResponse({'ok': False, 'error': str(e)}, status=409)
+    except (KeyError, ValueError) as e:
+        return JsonResponse({'ok': False, 'error': f'잘못된 요청: {e}'}, status=400)
+    return JsonResponse({'ok': True, 'card': _json_patient_card(appt)})
+
+
+@require_POST
+def api_unassign(request):
+    """그리드에서 배정 제거(대기자로 복귀). JSON: appointment_id."""
+    data = json.loads(request.body)
+    appt = get_object_or_404(Appointment, pk=data['appointment_id'])
+    sch.unassign(appt)
+    return JsonResponse({'ok': True})
+
+
+@require_POST
+def api_toggle_fixed(request):
+    """스케줄 고정 토글. JSON: appointment_id."""
+    data = json.loads(request.body)
+    appt = get_object_or_404(Appointment, pk=data['appointment_id'])
+    return JsonResponse({'ok': True, 'is_fixed': sch.toggle_fixed(appt)})
 
 
 def waitlist(request):
