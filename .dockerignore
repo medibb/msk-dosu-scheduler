@@ -1,0 +1,27 @@
+# 개발용 로컬 의존성/가상환경 (이미지에 불필요)
+.pydeps/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+
+# 로컬 개발 DB (운영은 /data 볼륨의 db.sqlite3 사용)
+db.sqlite3
+db.sqlite3-journal
+
+# git / 문서 / 데이터 원본
+.git/
+.gitignore
+tasks/
+*.xlsx
+*.xls
+*.hwpx
+*.docx
+
+# 환경/정적 산출물
+.env
+.env*.local
+staticfiles/
+.DS_Store
+._*
+*.log

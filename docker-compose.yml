@@ -9,7 +9,8 @@ services:
       # SQLite 파일을 영구 볼륨에 둔다 → 모든 기기가 이 서버 한 곳을 공유
       DATABASE_URL: "sqlite:////data/db.sqlite3"
     volumes:
-      - sqlite_data:/data
+      # NAS 현재 폴더의 ./data 에 db.sqlite3 저장 → File Station에서 바로 백업 가능
+      - ./data:/data
     ports:
       - "8000:8000"
     restart: unless-stopped
@@ -18,6 +19,3 @@ services:
       python manage.py migrate &&
       python manage.py runserver 0.0.0.0:8000
       "
-
-volumes:
-  sqlite_data:
