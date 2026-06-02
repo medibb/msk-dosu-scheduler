@@ -48,14 +48,14 @@ PRD: `tasks/prd-msk-dosu-scheduling.md`
   - [x] 0.2 기능 브랜치 생성 및 체크아웃 (`feature/msk-dosu-scheduling`)
   - [x] 0.3 GitHub public 원격 저장소 연결 및 push (`medibb/msk-dosu-scheduler`)
 
-- [ ] 1.0 프로젝트 기반 구축 (Django + SQLite + Docker, 공용 로그인, 데이터 모델)
-  - [ ] 1.1 Django 프로젝트 생성(`config` 프로젝트 + `scheduler` 앱), `requirements.txt` 작성
-  - [ ] 1.2 `Dockerfile` + `docker-compose.yml`(web + SQLite 볼륨), `.env`/`.gitignore` 정리
-  - [ ] 1.3 `settings.py` 구성(dj-database-url로 SQLite 기본, 앱/정적파일/타임존 ko)
-  - [ ] 1.4 데이터 모델 작성(`models.py`): Patient, Appointment, Session, Therapist, Settings + 상태 choices(대기중/예약완료/시행중/종결) + 마이그레이션
-  - [ ] 1.5 `admin.py` 등록(데이터 확인용) 및 시드용 치료사(최수홍/김대현/김예지) 데이터
-  - [ ] 1.6 공용 1계정 로그인(`auth.py`, 로그인 뷰/템플릿, 로그인 필수 미들웨어/데코레이터) + 테스트
-  - [ ] 1.7 공통 레이아웃/네비게이션(`base.html`): 시간표 / 대기자 / 통계 / 임포트
+- [x] 1.0 프로젝트 기반 구축 (Django + SQLite + Docker, 공용 로그인, 데이터 모델)
+  - [x] 1.1 Django 프로젝트 생성(`config` 프로젝트 + `scheduler` 앱), `requirements.txt` 작성
+  - [x] 1.2 `Dockerfile` + `docker-compose.yml`(web + SQLite 볼륨), `.env`/`.gitignore` 정리
+  - [x] 1.3 `settings.py` 구성(dj-database-url로 SQLite 기본, 앱/정적파일/타임존 ko)
+  - [x] 1.4 데이터 모델 작성(`models.py`): Patient, Appointment, Session, Therapist, Settings + 상태 choices(대기중/예약완료/시행중/종결) + 마이그레이션
+  - [x] 1.5 `admin.py` 등록(데이터 확인용) 및 시드용 치료사(최수홍/김대현/김예지) 데이터
+  - [x] 1.6 공용 1계정 로그인(`auth.py`, 로그인 뷰/템플릿, 로그인 필수 미들웨어/데코레이터) + 테스트
+  - [x] 1.7 공통 레이아웃/네비게이션(`base.html`): 시간표 / 대기자 / 통계 / 임포트
 
 - [ ] 2.0 환자/대기자 관리 (등록·수정·검색·필터, 상태 흐름, 엑셀 임포트)
   - [ ] 2.1 환자 등록/수정 폼·뷰(`forms.py`, `views.py`): 처방일자·등록번호·성명·처방코드(간단/기본/복잡 + 외 토글)·메모·진료과·나이·성별·담당치료사·연락처·희망요일/시간·비고

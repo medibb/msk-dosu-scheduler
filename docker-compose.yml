@@ -1,0 +1,23 @@
+services:
+  web:
+    build: .
+    environment:
+      DJANGO_SECRET_KEY: "${DJANGO_SECRET_KEY:-dev-secret-key-change-in-production}"
+      DJANGO_DEBUG: "${DJANGO_DEBUG:-1}"
+      DJANGO_ALLOWED_HOSTS: "${DJANGO_ALLOWED_HOSTS:-*}"
+      APP_PASSWORD: "${APP_PASSWORD:-dosu1234}"
+      # SQLite 파일을 영구 볼륨에 둔다 → 모든 기기가 이 서버 한 곳을 공유
+      DATABASE_URL: "sqlite:////data/db.sqlite3"
+    volumes:
+      - sqlite_data:/data
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    command: >
+      sh -c "
+      python manage.py migrate &&
+      python manage.py runserver 0.0.0.0:8000
+      "
+
+volumes:
+  sqlite_data:

@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block title %}주간 시간표 · 도수치료 스케줄러{% endblock %}
+{% block content %}
+  <h2>주간 시간표</h2>
+  <table style="border-collapse:collapse; background:#fff;">
+    <thead>
+      <tr>
+        <th style="border:1px solid #e5e7eb; padding:6px 10px; background:#f9fafb;">시간</th>
+        {% for d in "월화수목금" %}
+          <th style="border:1px solid #e5e7eb; padding:6px 16px; background:#f9fafb;">{{ d }}</th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for slot in time_slots %}
+        <tr>
+          <td style="border:1px solid #e5e7eb; padding:6px 10px; font-size:13px; color:#6b7280;">{{ slot.start }}~{{ slot.end }}</td>
+          {% for d in "월화수목금" %}
+            <td style="border:1px solid #e5e7eb; padding:6px 16px; min-width:120px; height:44px;"></td>
+          {% endfor %}
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p style="color:#6b7280; margin-top:12px;">드래그앤드롭 배정은 작업 3.0에서 구현됩니다.</p>
+{% endblock %}

@@ -1,0 +1,37 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}도수치료 스케줄러{% endblock %}</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; color: #1f2937; background: #f3f4f6; }
+    header { background: #2563eb; color: #fff; padding: 0 16px; display: flex; align-items: center; gap: 16px; height: 52px; }
+    header .brand { font-weight: 700; }
+    header nav { display: flex; gap: 4px; flex: 1; }
+    header nav a { color: #fff; text-decoration: none; padding: 8px 12px; border-radius: 6px; font-size: 14px; }
+    header nav a:hover, header nav a.active { background: rgba(255,255,255,.18); }
+    header .logout { color: #c7d2fe; text-decoration: none; font-size: 13px; }
+    main { padding: 16px; }
+    .status-대기중 { background:#9ca3af; } .status-예약완료 { background:#3b82f6; }
+    .status-시행중 { background:#10b981; } .status-종결 { background:#6b7280; }
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <header>
+    <span class="brand">🩺 도수치료 스케줄러</span>
+    <nav>
+      <a href="{% url 'schedule' %}">시간표</a>
+      <a href="{% url 'waitlist' %}">대기자</a>
+      <a href="{% url 'stats' %}">통계</a>
+      <a href="{% url 'import' %}">엑셀 임포트</a>
+    </nav>
+    <a class="logout" href="{% url 'logout' %}">로그아웃</a>
+  </header>
+  <main>{% block content %}{% endblock %}</main>
+  {% block scripts %}{% endblock %}
+</body>
+</html>
