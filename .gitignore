@@ -1,12 +1,16 @@
-# dependencies
-node_modules/
-.pnp
-.pnp.js
+# python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
 
-# next.js
-/.next/
-/out/
-/build
+# django
+db.sqlite3
+db.sqlite3-journal
+/staticfiles/
+/media/
+/uploads/
 
 # env
 .env
@@ -22,4 +26,3 @@ node_modules/
 .DS_Store
 ._*
 *.log
-npm-debug.log*

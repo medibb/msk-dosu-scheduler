@@ -14,5 +14,13 @@
 - 기간·처방코드·부위·치료사별 통계 / CSV 내보내기
 - 클라우드 저장(여러 기기 공유), 공용 1계정 로그인
 
-## 기술 스택(예정)
-Next.js + Supabase(Postgres) / dnd-kit / SheetJS
+## 기술 스택
+- **Django 5.2 + SQLite + Docker** 자체배포 (기존 `spineview`와 동일 패턴)
+- 드래그앤드롭: SortableJS · 엑셀 임포트: openpyxl
+- 멀티기기 공유: 단일 서버가 `db.sqlite3`(영구 볼륨)를 보유, 모든 기기가 접속해 공유
+- 확장: `dj-database-url`로 추후 Postgres 전환 가능 · 클라우드 배포는 Railway/Render/Fly(Docker) (Vercel 비대상)
+
+## 실행 (개발)
+```bash
+docker compose up --build      # http://localhost:8000
+```

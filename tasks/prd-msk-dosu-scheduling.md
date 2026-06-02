@@ -89,12 +89,15 @@
 
 ## 7. Technical Considerations (기술 고려사항)
 
-- 클라우드 동기화가 필요하므로 백엔드+DB가 필요하다. 후보: Next.js + Supabase(Postgres) 또는 Firebase. 소수 사용자·빠른 구축을 고려해 **Supabase 권장**.
-- 드래그앤드롭 그리드 구현을 위해 검증된 라이브러리 사용 권장(dnd-kit 등).
-- 엑셀 임포트를 위해 `xlsx`/SheetJS 등 파싱 라이브러리 사용.
+- **스택: Django 5.2 + SQLite + Docker 자체배포** (기존 `spineview` 프로젝트와 동일 패턴, 운영 노하우 재사용).
+- **멀티기기 공유 방식:** 단일 서버(Docker 컨테이너 1개)가 `db.sqlite3` 하나를 영구 볼륨에 마운트해 보유. 모든 치료사 기기가 그 서버에 접속 → 같은 데이터 공유. 별도 클라우드 DB(Supabase/Turso) 불필요.
+- **확장:** `dj-database-url`로 `DATABASE_URL`만 바꾸면 추후 Postgres 전환 가능(소수 사용자라 당분간 SQLite로 충분).
+- **클라우드 배포(선택):** Railway/Render/Fly 등 Docker·영구디스크 지원 호스트면 가능. **Vercel은 비대상**(서버리스 파일시스템이 일시적이라 SQLite 쓰기 불가).
+- 드래그앤드롭 그리드는 Django 템플릿 + **SortableJS**(또는 HTMX)로 구현.
+- 엑셀 임포트는 **openpyxl**(spineview에서도 사용) 사용.
 - 접근 보호는 **공용 1계정(단일 비밀번호)** 으로 충분. 개인 계정·권한 분리 없음.
 - 실시간 구독은 불필요. 페이지 진입/새로고침 시 DB에서 최신 데이터를 읽는 방식이면 충분.
-- 데이터 모델 핵심 엔터티: `patient`(환자/처방 단위), `appointment`(시간표 배정·회차), `therapist`(치료사), `settings`(시간대 구성).
+- 데이터 모델 핵심 엔터티(Django 모델): `Patient`(환자/처방 단위), `Appointment`(시간표 배정), `Session`(회차 실시 기록), `Therapist`(치료사), `Settings`(시간대 구성).
 
 ## 8. Success Metrics (성공 지표)
 
@@ -111,3 +114,4 @@
 3. **로그인:** 공용 1계정(단일 비밀번호). 개인 계정/권한 분리 없음. *(FR24)*
 4. **통계 기준:** 별도 표준 양식 없음 — 기간별·처방코드별·부위별·치료사별 기본 집계 제공. *(FR18~20)*
 5. **동기화:** 실시간 불필요. 새로고침/재진입 시 최신 데이터면 충분. *(FR23)*
+6. **스택/배포:** Django + SQLite + Docker 자체배포(spineview와 동일). Vercel 비대상, 필요 시 Railway/Render/Fly로 Docker 배포. *(7장)*
