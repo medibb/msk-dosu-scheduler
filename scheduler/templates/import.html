@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block title %}엑셀 임포트 · 도수치료 스케줄러{% endblock %}
+{% block content %}
+  <h2>엑셀 임포트</h2>
+  <p style="color:#6b7280;">
+    <code>근골격계도수치료 처방 명단</code> 시트가 포함된 엑셀 파일을 업로드하면 환자를 일괄 등록합니다.
+    이미 등록된 환자(등록번호+성명 동일)는 건너뜁니다.
+  </p>
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div class="field" style="max-width:480px;">
+      <input type="file" name="file" accept=".xlsx,.xls" required>
+    </div>
+    <button class="btn btn-primary" type="submit">업로드 후 등록</button>
+  </form>
+{% endblock %}

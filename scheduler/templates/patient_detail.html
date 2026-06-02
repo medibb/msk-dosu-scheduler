@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block title %}{{ patient.name }} · 도수치료 스케줄러{% endblock %}
+{% block content %}
+  <div style="display:flex; justify-content:space-between; align-items:center;">
+    <h2>{{ patient.name }}
+      <span class="badge status-{{ patient.status }}">{{ patient.status }}</span>
+    </h2>
+    <a class="btn" href="{% url 'patient_edit' patient.pk %}">수정</a>
+  </div>
+
+  {% if patient.is_completion_due %}
+    <div class="msg msg-error">⚠ 종결 목표 회차({{ patient.target_sessions }}회) 도달 — 종결평가가 필요합니다.</div>
+  {% endif %}
+
+  <table class="list" style="max-width:560px;">
+    <tr><th style="width:130px;">등록번호</th><td>{{ patient.registration_number }}</td></tr>
+    <tr><th>나이/성별</th><td>{{ patient.age|default:'-' }} / {{ patient.sex|default:'-' }}</td></tr>
+    <tr><th>처방</th><td>{{ patient.get_prescription_code_display }}{% if patient.is_outpatient %} 외{% endif %} ({{ patient.prescription_date|date:'Y-m-d'|default:'-' }})</td></tr>
+    <tr><th>메모</th><td>{{ patient.memo|default:'-' }}</td></tr>
+    <tr><th>진료과</th><td>{{ patient.department }}</td></tr>
+    <tr><th>담당치료사</th><td>{{ patient.therapist.name|default:'-' }}</td></tr>
+    <tr><th>회차</th><td>{{ patient.session_count }} / {{ patient.target_sessions }}회</td></tr>
+    <tr><th>종결평가 예정</th><td>{{ patient.completion_eval_date|date:'Y-m-d'|default:'-' }}</td></tr>
+    <tr><th>연락처</th><td>{{ patient.phone|default:'-' }}</td></tr>
+    <tr><th>희망요일/시간</th><td>{{ patient.preferred_days|default:'-' }} {{ patient.preferred_times }}</td></tr>
+    <tr><th>비고</th><td>{{ patient.note|default:'-'|linebreaksbr }}</td></tr>
+  </table>
+
+  <div style="margin-top:14px;">
+    {% if next_status %}
+      <form method="post" action="{% url 'patient_set_status' patient.pk %}" style="display:inline;">
+        {% csrf_token %}
+        <button class="btn btn-primary" type="submit">다음 단계로 → {{ next_status }}</button>
+      </form>
+    {% endif %}
+    <a class="btn" href="{% url 'waitlist' %}">목록</a>
+  </div>
+{% endblock %}

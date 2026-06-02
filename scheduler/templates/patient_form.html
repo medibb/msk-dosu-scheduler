@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block title %}{% if is_new %}환자 등록{% else %}환자 수정{% endif %} · 도수치료 스케줄러{% endblock %}
+{% block content %}
+  <h2>{% if is_new %}환자 등록{% else %}{{ patient.name }} 수정{% endif %}</h2>
+  <form method="post" style="max-width:640px;">
+    {% csrf_token %}
+    {% for field in form %}
+      <div class="field">
+        <label>{{ field.label }}</label>
+        {{ field }}
+        {% if field.errors %}<div class="msg msg-error">{{ field.errors|striptags }}</div>{% endif %}
+      </div>
+    {% endfor %}
+    <button class="btn btn-primary" type="submit">저장</button>
+    <a class="btn" href="{% url 'waitlist' %}">취소</a>
+  </form>
+{% endblock %}
