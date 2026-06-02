@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block title %}통계 · 도수치료 스케줄러{% endblock %}
+{% block content %}
+  <h2>통계</h2>
+
+  <form class="filters" method="get">
+    <select name="preset" onchange="this.form.submit()">
+      <option value="month"   {% if preset == 'month' %}selected{% endif %}>이번 달</option>
+      <option value="quarter" {% if preset == 'quarter' %}selected{% endif %}>이번 분기</option>
+      <option value="year"    {% if preset == 'year' %}selected{% endif %}>올해</option>
+    </select>
+    <span style="color:#6b7280;">또는 직접 기간:</span>
+    <input type="date" name="start" value="{{ data.start|date:'Y-m-d' }}">
+    <input type="date" name="end" value="{{ data.end|date:'Y-m-d' }}">
+    <button class="btn" type="submit">조회</button>
+    <a class="btn" href="?start={{ data.start|date:'Y-m-d' }}&end={{ data.end|date:'Y-m-d' }}&format=csv">CSV 내보내기</a>
+  </form>
+
+  <p style="font-size:16px;">
+    <strong>{{ data.start|date:'Y-m-d' }} ~ {{ data.end|date:'Y-m-d' }}</strong>
+    도수치료 총 <strong style="color:#2563eb;">{{ data.total }}</strong>건
+  </p>
+
+  <div style="display:flex; gap:24px; flex-wrap:wrap;">
+    {% include 'partials/stat_table.html' with title='처방코드별' rows=data.by_code %}
+    {% include 'partials/stat_table.html' with title='치료사별' rows=data.by_therapist %}
+    {% include 'partials/stat_table.html' with title='부위별' rows=data.by_region %}
+  </div>
+{% endblock %}

@@ -26,13 +26,36 @@
     <tr><th>비고</th><td>{{ patient.note|default:'-'|linebreaksbr }}</td></tr>
   </table>
 
-  <div style="margin-top:14px;">
+  <div style="margin-top:14px; display:flex; gap:8px; flex-wrap:wrap;">
+    <form method="post" action="{% url 'patient_add_session' patient.pk %}" style="display:inline;">
+      {% csrf_token %}
+      <button class="btn btn-primary" type="submit">+ 회차 기록 (오늘)</button>
+    </form>
+    {% if patient.session_count %}
+      <form method="post" action="{% url 'patient_undo_session' patient.pk %}" style="display:inline;"
+            onsubmit="return confirm('마지막 회차를 취소할까요?');">
+        {% csrf_token %}
+        <button class="btn" type="submit">마지막 회차 취소</button>
+      </form>
+    {% endif %}
     {% if next_status %}
       <form method="post" action="{% url 'patient_set_status' patient.pk %}" style="display:inline;">
         {% csrf_token %}
-        <button class="btn btn-primary" type="submit">다음 단계로 → {{ next_status }}</button>
+        <button class="btn" type="submit">다음 단계로 → {{ next_status }}</button>
       </form>
     {% endif %}
     <a class="btn" href="{% url 'waitlist' %}">목록</a>
   </div>
+
+  <h3 style="margin-top:20px;">회차 기록</h3>
+  <table class="list" style="max-width:320px;">
+    <thead><tr><th>회차</th><th>실시일</th></tr></thead>
+    <tbody>
+      {% for s in sessions %}
+        <tr><td>{{ s.number }}회</td><td>{{ s.date|date:'Y-m-d' }}</td></tr>
+      {% empty %}
+        <tr><td colspan="2" style="color:#9ca3af;">기록 없음</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
 {% endblock %}

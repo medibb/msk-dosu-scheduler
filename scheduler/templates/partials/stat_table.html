@@ -1,0 +1,13 @@
+<div>
+  <h3 style="font-size:14px;">{{ title }}</h3>
+  <table class="list" style="min-width:200px;">
+    <thead><tr><th>항목</th><th>건수</th></tr></thead>
+    <tbody>
+      {% for row in rows %}
+        <tr><td>{{ row.key }}</td><td>{{ row.count }}</td></tr>
+      {% empty %}
+        <tr><td colspan="2" style="color:#9ca3af;">없음</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

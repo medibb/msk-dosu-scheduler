@@ -6,6 +6,13 @@
     <a class="btn btn-primary" href="{% url 'patient_create' %}">+ 환자 등록</a>
   </div>
 
+  {% if due_count %}
+    <div class="msg msg-error">
+      ⚠ 종결 목표 회차에 도달한 환자 {{ due_count }}명 —
+      <a href="?due=1">종결평가 대상 보기</a>
+    </div>
+  {% endif %}
+
   <form class="filters" method="get">
     <select name="status" onchange="this.form.submit()">
       <option value="">전체 상태</option>
