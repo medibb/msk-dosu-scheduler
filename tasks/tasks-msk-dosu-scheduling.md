@@ -44,10 +44,10 @@ PRD: `tasks/prd-msk-dosu-scheduling.md`
 
 ## Tasks
 
-- [ ] 0.0 프로젝트 초기화 및 기능 브랜치 생성
+- [x] 0.0 프로젝트 초기화 및 기능 브랜치 생성
   - [x] 0.1 `exdev/msk-scheduler/`에 git 저장소 초기화 및 초기 커밋(완료)
-  - [ ] 0.2 기능 브랜치 생성 및 체크아웃 (`git checkout -b feature/msk-dosu-scheduling`)
-  - [ ] 0.3 (선택) GitHub public 원격 저장소 연결 및 push
+  - [x] 0.2 기능 브랜치 생성 및 체크아웃 (`git checkout -b feature/msk-dosu-scheduling`)
+  - [x] 0.3 GitHub public 원격 저장소 연결 및 push (`medibb/msk-dosu-scheduler`)
 
 - [ ] 1.0 프로젝트 기반 구축 (Next.js + Supabase, 공용 로그인, DB 스키마)
   - [ ] 1.1 Next.js(App Router, TypeScript) 프로젝트 생성 및 기본 의존성 설치
