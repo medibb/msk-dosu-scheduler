@@ -1,0 +1,25 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# next.js
+/.next/
+/out/
+/build
+
+# env
+.env
+.env*.local
+
+# data sources (원본 엑셀 등 대용량 바이너리는 저장소에 포함하지 않음)
+*.xlsx
+*.xls
+*.hwpx
+*.docx
+
+# misc
+.DS_Store
+._*
+*.log
+npm-debug.log*
