@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% block title %}치료사 관리 · 도수치료 스케줄러{% endblock %}
+{% block head %}
+  <style>
+    .t-list { max-width:640px; }
+    .t-head, .t-row { display:flex; align-items:center; gap:8px; padding:6px 0; }
+    .t-head { color:#6b7280; font-size:13px; border-bottom:1px solid #e5e7eb; }
+    .t-row { border-bottom:1px solid #f3f4f6; }
+    .t-order { width:72px; }
+    .t-name { flex:1; }
+    .t-active { width:54px; text-align:center; }
+    .t-actions { display:flex; gap:6px; }
+    .t-row form { display:flex; align-items:center; gap:8px; margin:0; }
+    .t-row .row-form { flex:1; }
+  </style>
+{% endblock %}
+{% block content %}
+  <h2>치료사 관리</h2>
+
+  <!-- 추가 -->
+  <form method="post" class="filters" style="margin-bottom:20px;">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="create">
+    <input type="text" name="name" placeholder="새 치료사 이름" required style="min-width:200px;">
+    <button class="btn btn-primary" type="submit">+ 추가</button>
+  </form>
+
+  <div class="t-list">
+    <div class="t-head">
+      <span class="t-order">정렬</span>
+      <span class="t-name">이름</span>
+      <span class="t-active">활성</span>
+      <span class="t-actions">작업</span>
+    </div>
+
+    {% for t in therapists %}
+      <div class="t-row">
+        <!-- 수정 폼: 정렬/이름/활성/저장 -->
+        <form method="post" class="row-form">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="update">
+          <input type="hidden" name="id" value="{{ t.id }}">
+          <input class="t-order" type="number" name="order" value="{{ t.order }}">
+          <input class="t-name" type="text" name="name" value="{{ t.name }}" required>
+          <span class="t-active"><input type="checkbox" name="is_active" {% if t.is_active %}checked{% endif %}></span>
+          <button class="btn btn-primary" type="submit">저장</button>
+        </form>
+        <!-- 삭제 폼 -->
+        <form method="post"
+              onsubmit="return confirm('{{ t.name }} 치료사를 삭제할까요?\n이 치료사의 시간표 배정도 함께 삭제됩니다.');">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="delete">
+          <input type="hidden" name="id" value="{{ t.id }}">
+          <button class="btn" type="submit" style="color:#991b1b;">삭제</button>
+        </form>
+      </div>
+    {% empty %}
+      <div class="t-row" style="color:#6b7280;">등록된 치료사가 없습니다. 위에서 추가하세요.</div>
+    {% endfor %}
+  </div>
+
+  <p style="color:#6b7280; font-size:13px; margin-top:16px; max-width:640px;">
+    · <b>정렬</b>: 숫자가 작을수록 시간표에서 앞에 표시됩니다.<br>
+    · <b>활성</b> 해제 시 시간표/대기자 필터의 치료사 목록에서 숨겨집니다(데이터는 보존).<br>
+    · 이름을 바꾼 뒤에는 <b>저장</b> 버튼을 눌러야 적용됩니다.
+  </p>
+{% endblock %}

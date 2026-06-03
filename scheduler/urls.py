@@ -20,6 +20,7 @@ urlpatterns = [
     path('api/unassign/', views.api_unassign, name='api_unassign'),
     path('api/toggle-fixed/', views.api_toggle_fixed, name='api_toggle_fixed'),
 
+    path('therapists/', views.therapists, name='therapists'),
     path('stats/', views.stats, name='stats'),
     path('import/', views.import_excel, name='import'),
 ]

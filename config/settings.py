@@ -34,7 +34,7 @@ DEBUG = os.environ.get('DJANGO_DEBUG', '1') == '1'
 ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', '*').split(',')
 
 # 공용 1계정 로그인 비밀번호 (단일 비밀번호, 환경변수로 주입)
-APP_PASSWORD = os.environ.get('APP_PASSWORD', 'dosu1234')
+APP_PASSWORD = os.environ.get('APP_PASSWORD', 'mskdosu')
 
 
 # Application definition

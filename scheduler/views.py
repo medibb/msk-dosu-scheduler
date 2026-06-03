@@ -226,6 +226,56 @@ def stats(request):
     return render(request, 'stats.html', {'data': data, 'preset': preset})
 
 
+def therapists(request):
+    """치료사 관리: 추가 / 이름변경 / 정렬 / 활성토글 / 삭제.
+
+    공용 1계정 환경이라 별도 admin 로그인 없이 쓰도록 간이 화면으로 제공한다.
+    삭제 시 해당 치료사의 시간표 배정(Appointment)은 함께 사라지고,
+    환자의 담당치료사는 비워진다(모델의 on_delete 정책).
+    """
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        if action == 'create':
+            name = request.POST.get('name', '').strip()
+            if not name:
+                messages.error(request, '치료사 이름을 입력하세요.')
+            elif Therapist.objects.filter(name=name).exists():
+                messages.error(request, f'이미 등록된 치료사입니다: {name}')
+            else:
+                Therapist.objects.create(name=name, order=Therapist.objects.count())
+                messages.success(request, f'치료사를 추가했습니다: {name}')
+
+        elif action == 'update':
+            t = get_object_or_404(Therapist, pk=request.POST.get('id'))
+            name = request.POST.get('name', '').strip()
+            if not name:
+                messages.error(request, '이름은 비울 수 없습니다.')
+            elif Therapist.objects.filter(name=name).exclude(pk=t.pk).exists():
+                messages.error(request, f'이미 등록된 이름입니다: {name}')
+            else:
+                t.name = name
+                t.is_active = request.POST.get('is_active') == 'on'
+                try:
+                    t.order = int(request.POST.get('order', t.order))
+                except (TypeError, ValueError):
+                    pass
+                t.save()
+                messages.success(request, f'수정했습니다: {t.name}')
+
+        elif action == 'delete':
+            t = get_object_or_404(Therapist, pk=request.POST.get('id'))
+            name = t.name
+            t.delete()
+            messages.success(request, f'삭제했습니다: {name}')
+
+        return redirect('therapists')
+
+    return render(request, 'therapists.html', {
+        'therapists': Therapist.objects.all(),
+    })
+
+
 def import_excel(request):
     """엑셀 업로드 → 일괄 등록(중복 건너뜀)."""
     from .services import import_excel as ie
