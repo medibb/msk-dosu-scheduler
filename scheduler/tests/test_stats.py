@@ -51,3 +51,20 @@ class AggregateTests(TestCase):
         csv_text = stats.to_csv(d)
         self.assertIn('구분,항목,건수', csv_text)
         self.assertIn('기간', csv_text)
+
+
+from django.test import override_settings  # noqa: E402
+from django.urls import reverse  # noqa: E402
+
+
+@override_settings(APP_PASSWORD='pw')
+class EmrRecordViewTests(TestCase):
+    def setUp(self):
+        self.client.post(reverse('login'), {'password': 'pw'})
+
+    def test_emr_page_renders_with_presets(self):
+        resp = self.client.get(reverse('emr_record'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, '선행치료 경과')
+        self.assertContains(resp, '사101')      # 옵션 프리셋 포함
+        self.assertContains(resp, 'copybtn')     # 복사 버튼

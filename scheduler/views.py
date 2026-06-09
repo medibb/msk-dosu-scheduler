@@ -1,4 +1,5 @@
 import json
+from datetime import timedelta
 from urllib.parse import urlencode
 
 from django.contrib import messages
@@ -305,6 +306,20 @@ def stats(request):
         return resp
 
     return render(request, 'stats.html', {'data': data, 'preset': preset})
+
+
+def emr_record(request):
+    """선행치료 경과 기록 생성 패널.
+
+    EMR과 직접 연동하지 않고, 도수치료 전환 근거가 되는 '선행치료 경과' 기록을
+    표준 양식으로 생성·표시하고 클립보드로 복사할 수 있게 한다(복붙용).
+    기록은 저장하지 않는 무상태(stateless) 도구라 모든 조립은 클라이언트에서 한다.
+    """
+    today = timezone.localdate()
+    return render(request, 'emr_record.html', {
+        'today': today.isoformat(),
+        'end_default': (today + timedelta(days=13)).isoformat(),  # D0~D13 ≈ 2주
+    })
 
 
 def therapists(request):

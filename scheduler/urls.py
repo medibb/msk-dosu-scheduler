@@ -24,5 +24,6 @@ urlpatterns = [
 
     path('therapists/', views.therapists, name='therapists'),
     path('stats/', views.stats, name='stats'),
+    path('emr/', views.emr_record, name='emr_record'),
     path('import/', views.import_excel, name='import'),
 ]

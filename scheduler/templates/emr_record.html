@@ -1,0 +1,161 @@
+{% extends 'base.html' %}
+{% block title %}EMR 기록 · 도수치료 스케줄러{% endblock %}
+{% block head %}
+<style>
+  .emr-layout { display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap; }
+  .emr-form { width:420px; flex-shrink:0; }
+  .emr-preview { flex:1; min-width:320px; }
+  .emr-row { display:flex; gap:10px; }
+  .emr-row .field { flex:1; }
+  #preview { width:100%; height:260px; font-family:ui-monospace,Menlo,Consolas,monospace;
+             font-size:13px; line-height:1.6; border:1px solid #d1d5db; border-radius:8px;
+             padding:12px; background:#f9fafb; resize:vertical; color:#111827; }
+  .copy-row { display:flex; gap:8px; align-items:center; margin-top:10px; }
+  .hint { color:#6b7280; font-size:12px; margin:4px 0 0; }
+  .emr-preview h3 { font-size:14px; margin:0 0 8px; }
+</style>
+{% endblock %}
+{% block content %}
+  <h2>EMR 기록 — 선행치료 경과</h2>
+  <p class="hint">도수치료 전환 근거가 되는 「선행치료 경과」 기록을 만들어 EMR에 붙여넣습니다. (저장되지 않는 생성 도구)</p>
+
+  <div class="emr-layout">
+    <!-- 입력 -->
+    <div class="emr-form">
+      <div class="field">
+        <label>선행치료 옵션(시행내용 자동 채움)</label>
+        <select id="id_option">
+          <option value="A">옵션 A — HP + TENS (기본)</option>
+          <option value="B">옵션 B — HP + 견인 (척추)</option>
+          <option value="C">옵션 C — 관절/힘줄</option>
+          <option value="manual">직접 입력</option>
+        </select>
+      </div>
+      <div class="emr-row">
+        <div class="field">
+          <label>시행 시작일</label>
+          <input type="date" id="id_start" value="{{ today }}">
+        </div>
+        <div class="field">
+          <label>시행 종료일</label>
+          <input type="date" id="id_end" value="{{ end_default }}">
+        </div>
+        <div class="field" style="max-width:90px;">
+          <label>시행횟수</label>
+          <input type="number" id="id_count" value="4" min="1">
+        </div>
+      </div>
+      <div class="field">
+        <label>시행내용</label>
+        <textarea id="id_content" rows="2"></textarea>
+      </div>
+      <div class="emr-row">
+        <div class="field" style="max-width:90px;">
+          <label>VAS (전)</label>
+          <input type="number" id="id_vas_before" min="0" max="10" placeholder="예:7">
+        </div>
+        <div class="field" style="max-width:90px;">
+          <label>VAS (후)</label>
+          <input type="number" id="id_vas_after" min="0" max="10" placeholder="예:6">
+        </div>
+        <div class="field">
+          <label>치료반응 평가</label>
+          <select id="id_response">
+            <option value="호전 없음">호전 없음</option>
+            <option value="호전 미미" selected>호전 미미</option>
+            <option value="부분 호전">부분 호전</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>판단</label>
+        <textarea id="id_decision" rows="2">기본물리치료 및 단순재활치료에 반응 불충분하여 도수치료[1일당] 시행 결정</textarea>
+      </div>
+    </div>
+
+    <!-- 미리보기 + 복사 -->
+    <div class="emr-preview">
+      <h3>생성된 기록 (미리보기)</h3>
+      <textarea id="preview" readonly></textarea>
+      <div class="copy-row">
+        <button type="button" class="btn btn-primary" id="copybtn">클립보드 복사</button>
+        <span class="hint" id="copyhint"></span>
+      </div>
+      <p class="hint">복사 후 EMR 경과기록란에 붙여넣기(Ctrl+V) 하세요.</p>
+    </div>
+  </div>
+
+  <script>
+  (function () {
+    // 옵션별 선행치료 시행내용 프리셋 (전략 문서 옵션 A/B/C 기준)
+    var PRESETS = {
+      A: '표층열치료(사101) 4회, 경피적전기신경자극치료(사104) 3회, 단순운동치료(사106) 1회',
+      B: '표층열치료(사101) 4회, 간헐적견인(사112) 2회, 경피적전기신경자극치료(사104) 1회, 단순운동치료(사106) 1회',
+      C: '표층열치료(사101) 3회, 심층열치료(사102) 1회, 경피적전기신경자극치료(사104) 3회, 복합운동치료(사116가) 1회'
+    };
+    var $ = function (id) { return document.getElementById(id); };
+    var val = function (id) { return ($(id).value || '').trim(); };
+
+    function weeks(start, end) {
+      if (!start || !end) return 'OO';
+      var d = (new Date(end) - new Date(start)) / 86400000;
+      if (isNaN(d) || d < 0) return 'OO';
+      return Math.max(1, Math.round(d / 7));
+    }
+
+    function build() {
+      var start = val('id_start'), end = val('id_end');
+      var vb = val('id_vas_before'), va = val('id_vas_after');
+      var vas = (vb !== '' && va !== '') ? (vb + ' → ' + va) : 'OO → OO';
+      var content = val('id_content') || '________';
+      return '[선행치료 경과]\n'
+        + '- 시행기간: ' + (start || '____-__-__') + ' ~ ' + (end || '____-__-__')
+          + ' (' + weeks(start, end) + '주간)\n'
+        + '- 시행횟수: ' + (val('id_count') || 'O') + '회\n'
+        + '- 시행내용: ' + content + '\n'
+        + '- 치료반응: VAS ' + vas + ' (' + val('id_response') + ')\n'
+        + '- 판단: ' + (val('id_decision') || '________');
+    }
+
+    function refresh() { $('preview').value = build(); }
+
+    // 옵션 선택 → 시행내용 채움
+    $('id_option').addEventListener('change', function () {
+      if (PRESETS[this.value]) $('id_content').value = PRESETS[this.value];
+      refresh();
+    });
+    // 모든 입력 변화 → 미리보기 갱신
+    ['id_start','id_end','id_count','id_content','id_vas_before','id_vas_after','id_response','id_decision']
+      .forEach(function (id) {
+        $(id).addEventListener('input', refresh);
+        $(id).addEventListener('change', refresh);
+      });
+
+    // 클립보드 복사 (HTTP/LAN 환경 대응: execCommand 폴백)
+    $('copybtn').addEventListener('click', function () {
+      var ta = $('preview'), text = ta.value;
+      var note = function (msg) {
+        $('copyhint').textContent = msg;
+        setTimeout(function () { $('copyhint').textContent = ''; }, 2000);
+      };
+      var fallback = function () {
+        ta.removeAttribute('readonly'); ta.focus(); ta.select();
+        var ok = false;
+        try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+        ta.setAttribute('readonly', 'readonly');
+        window.getSelection().removeAllRanges();
+        note(ok ? '복사됨 ✓' : '복사 실패 — 직접 선택해 복사하세요');
+      };
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(function () { note('복사됨 ✓'); }, fallback);
+      } else {
+        fallback();  // http:// 접속 시 이 경로
+      }
+    });
+
+    // 초기화
+    $('id_content').value = PRESETS.A;
+    refresh();
+  })();
+  </script>
+{% endblock %}
