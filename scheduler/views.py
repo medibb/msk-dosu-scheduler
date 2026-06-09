@@ -1,7 +1,8 @@
 import json
+from urllib.parse import urlencode
 
 from django.contrib import messages
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -125,16 +126,31 @@ def api_toggle_fixed(request):
     return JsonResponse({'ok': True, 'is_fixed': sch.toggle_fixed(appt)})
 
 
-def waitlist(request):
-    """대기자/환자 목록: 상태·치료사 필터, 검색, 정렬."""
-    qs = Patient.objects.select_related('therapist').all()
+# 대기자 표에서 정렬 가능한 컬럼: 표시 key → ORM 정렬 필드
+WAITLIST_SORT_FIELDS = {
+    'status': 'status',
+    'name': 'name',
+    'registration_number': 'registration_number',
+    'category': 'category',
+    'memo': 'memo',
+    'therapist': 'therapist__name',
+    'sessions': 'sess_count',          # 아래 annotate로 계산
+    'prescription_date': 'prescription_date',
+}
 
+
+def waitlist(request):
+    """대기자/환자 목록: 상태·치료사 필터, 검색, 컬럼별 오름/내림 정렬."""
     from .services import sessions as ssvc
+
+    qs = Patient.objects.select_related('therapist').annotate(sess_count=Count('sessions'))
 
     status = request.GET.get('status', '')
     therapist_id = request.GET.get('therapist', '')
     q = request.GET.get('q', '').strip()
     due_only = request.GET.get('due') == '1'
+    sort = request.GET.get('sort', '')
+    direction = request.GET.get('dir', '')
 
     if status:
         qs = qs.filter(status=status)
@@ -147,6 +163,33 @@ def waitlist(request):
     if due_only:
         qs = qs.filter(pk__in=[p.pk for p in due])
 
+    # 정렬: 유효한 컬럼이면 그 기준(오름/내림), 아니면 기본(처방일 내림차순)
+    if sort in WAITLIST_SORT_FIELDS:
+        if direction not in ('asc', 'desc'):
+            direction = 'asc'
+        prefix = '' if direction == 'asc' else '-'
+        qs = qs.order_by(prefix + WAITLIST_SORT_FIELDS[sort], 'name')
+    else:
+        sort, direction = '', ''
+        qs = qs.order_by('-prescription_date', 'name')
+
+    # 헤더용 정렬 링크: 현재 필터를 유지하고, 클릭 시 방향을 토글한다.
+    base = {}
+    if status:
+        base['status'] = status
+    if therapist_id:
+        base['therapist'] = therapist_id
+    if q:
+        base['q'] = q
+    if due_only:
+        base['due'] = '1'
+    sort_links = {}
+    for key in WAITLIST_SORT_FIELDS:
+        params = dict(base, sort=key)
+        params['dir'] = 'desc' if (sort == key and direction == 'asc') else 'asc'
+        arrow = ('▲' if direction == 'asc' else '▼') if sort == key else ''
+        sort_links[key] = {'url': '?' + urlencode(params), 'arrow': arrow}
+
     return render(request, 'waitlist.html', {
         'patients': qs,
         'therapists': Therapist.objects.filter(is_active=True),
@@ -156,6 +199,9 @@ def waitlist(request):
         'q': q,
         'due_count': len(due),
         'due_only': due_only,
+        'sort_links': sort_links,
+        'cur_sort': sort,
+        'cur_dir': direction,
     })
 
 

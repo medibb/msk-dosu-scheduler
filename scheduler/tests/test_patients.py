@@ -55,6 +55,19 @@ class PatientViewTests(TestCase):
         p = Patient.objects.get(name='박기타')
         self.assertEqual(p.category_label, 'Knee 재활')
 
+    def test_waitlist_sort_by_name_asc_desc(self):
+        # p1=홍길동, p2=김철수 → 이름 오름차순이면 김철수가 먼저
+        asc = self.client.get(reverse('waitlist'), {'sort': 'name', 'dir': 'asc'}).content.decode()
+        self.assertLess(asc.index('김철수'), asc.index('홍길동'))
+        desc = self.client.get(reverse('waitlist'), {'sort': 'name', 'dir': 'desc'}).content.decode()
+        self.assertLess(desc.index('홍길동'), desc.index('김철수'))
+
+    def test_waitlist_sort_links_preserve_filter(self):
+        resp = self.client.get(reverse('waitlist'), {'therapist': self.t.id})
+        # 정렬 링크에 현재 치료사 필터가 유지되어야 한다
+        self.assertContains(resp, f'therapist={self.t.id}')
+        self.assertContains(resp, 'sort=name')
+
     def test_status_transition_advances_one_step(self):
         self.client.post(reverse('patient_set_status', args=[self.p1.pk]))
         self.p1.refresh_from_db()
