@@ -159,6 +159,26 @@ class ScheduleApiTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertFalse(Reservation.objects.filter(patient=self.p1).exists())
 
+    def test_api_add_session_increments(self):
+        resp = self._post('api_add_session', {'patient_id': self.p1.id})
+        self.assertEqual(resp.status_code, 200)
+        d = resp.json()
+        self.assertTrue(d['ok'])
+        self.assertEqual(d['used'], 1)
+        self.p1.refresh_from_db()
+        self.assertEqual(self.p1.status, Status.ONGOING)
+
+    def test_api_add_session_auto_completes_at_limit(self):
+        self.p1.external_sessions = 14
+        self.p1.target_sessions = 15
+        self.p1.save()
+        resp = self._post('api_add_session', {'patient_id': self.p1.id})
+        d = resp.json()
+        self.assertEqual(d['used'], 15)
+        self.assertIn('종결', d['alert'])
+        self.p1.refresh_from_db()
+        self.assertEqual(self.p1.status, Status.DONE)
+
     def test_schedule_all_view_renders(self):
         sch.place(self.p1, self.t, 0, 0)
         resp = self.client.get(reverse('schedule'))   # 전체 보기(기본)

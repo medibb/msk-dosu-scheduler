@@ -69,7 +69,7 @@
        data-unassign-url="{% url 'api_unassign' %}"
        data-reserve-url="{% url 'api_reserve' %}"
        data-unreserve-url="{% url 'api_unreserve' %}"
-       data-fixed-url="{% url 'api_toggle_fixed' %}">
+       data-add-session-url="{% url 'api_add_session' %}">
     <div class="grid-wrap">
 
       <!-- 주간 시간표 -->
@@ -96,9 +96,9 @@
                       {% if a %}
                         <div class="card{% if a.is_fixed %} fixed{% endif %}" draggable="true"
                              data-patient-id="{{ a.patient.id }}" data-appointment-id="{{ a.id }}"
-                             title="더블클릭: 스케줄 고정 토글">
+                             title="더블클릭: 회차 +1 기록">
                           <div class="nm"><a href="{% url 'patient_detail' a.patient.id %}" draggable="false">{{ a.patient.name }}</a></div>
-                          <div class="meta">{{ a.patient.used_sessions }}/{{ a.patient.target_sessions }}</div>
+                          <div class="meta"><span class="sess">{{ a.patient.used_sessions }}/{{ a.patient.target_sessions }}</span></div>
                         </div>
                       {% endif %}
                     {% endwith %}
@@ -124,9 +124,9 @@
                       {% if a %}
                         <div class="card{% if a.is_fixed %} fixed{% endif %}" draggable="true"
                              data-patient-id="{{ a.patient.id }}" data-appointment-id="{{ a.id }}"
-                             title="더블클릭: 스케줄 고정 토글">
+                             title="더블클릭: 회차 +1 기록">
                           <div class="nm"><a href="{% url 'patient_detail' a.patient.id %}" draggable="false">{{ a.patient.name }}</a></div>
-                          <div class="meta">{{ a.patient.category_label|default:a.patient.memo|truncatechars:14 }} · {{ a.patient.used_sessions }}/{{ a.patient.target_sessions }}</div>
+                          <div class="meta">{{ a.patient.category_label|default:a.patient.memo|truncatechars:14 }} · <span class="sess">{{ a.patient.used_sessions }}/{{ a.patient.target_sessions }}</span></div>
                         </div>
                       {% endif %}
                     {% endwith %}
@@ -138,7 +138,8 @@
         </table>
       {% endif %}
       <p style="color:#6b7280; font-size:13px; margin-top:8px;">
-        대기자/예약대기 카드를 끌어 시간표 칸에 배정(→시행중)하거나 되돌릴 수 있습니다. 노란 카드 = 스케줄 고정(더블클릭 토글).
+        대기자/예약대기 카드를 끌어 시간표 칸에 배정(→시행중)하거나 되돌릴 수 있습니다.
+        시간표 카드를 <b>더블클릭</b>하면 도수치료 회차가 <b>+1</b> 기록됩니다.
       </p>
 
       <!-- 예약 대기칸: 요일×오전/오후 (시간표 아래) -->
@@ -180,5 +181,5 @@
 {% endblock %}
 {% block scripts %}
   <!-- ?v= : 재빌드 후 브라우저가 옛 JS를 캐시하지 않도록 버전 무효화(코드 바꾸면 숫자 올림) -->
-  <script src="{% static 'js/schedule.js' %}?v=20260609b"></script>
+  <script src="{% static 'js/schedule.js' %}?v=20260609c"></script>
 {% endblock %}

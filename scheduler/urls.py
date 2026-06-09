@@ -22,6 +22,7 @@ urlpatterns = [
     path('api/unassign/', views.api_unassign, name='api_unassign'),
     path('api/reserve/', views.api_reserve, name='api_reserve'),
     path('api/unreserve/', views.api_unreserve, name='api_unreserve'),
+    path('api/add-session/', views.api_add_session, name='api_add_session'),
     path('api/toggle-fixed/', views.api_toggle_fixed, name='api_toggle_fixed'),
 
     path('therapists/', views.therapists, name='therapists'),

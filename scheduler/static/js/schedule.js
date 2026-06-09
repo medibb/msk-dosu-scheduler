@@ -9,7 +9,7 @@
     unassign: layout.dataset.unassignUrl,
     reserve: layout.dataset.reserveUrl,
     unreserve: layout.dataset.unreserveUrl,
-    fixed: layout.dataset.fixedUrl,
+    addSession: layout.dataset.addSessionUrl,
   };
 
   function csrf() {
@@ -106,12 +106,22 @@
     }
   }
 
-  // 더블클릭: 스케줄 고정 토글
+  // 더블클릭: 도수치료 회차 +1 기록 (시간표에 배정된 카드만)
   document.addEventListener('dblclick', async function (e) {
+    if (e.target.closest('a')) return;              // 이름 링크 더블클릭은 무시
     const card = e.target.closest('.card');
     if (!card || !card.dataset.appointmentId) return;
-    const r = await post(URLS.fixed, { appointment_id: card.dataset.appointmentId });
-    if (r.ok) card.classList.toggle('fixed', r.data.is_fixed);
+    const nameEl = card.querySelector('.nm a, .nm');
+    const name = nameEl ? nameEl.textContent.trim() : '';
+    if (!confirm(name + ' 회차 +1을 기록할까요?')) return;
+    const r = await post(URLS.addSession, { patient_id: card.dataset.patientId });
+    if (r.ok && r.data.ok) {
+      const sess = card.querySelector('.sess');
+      if (sess) sess.textContent = r.data.used + '/' + r.data.target;
+      if (r.data.alert) alert(r.data.alert);
+    } else {
+      alert((r.data && r.data.error) || '회차 기록 실패');
+    }
   });
 
   bindDropTargets();

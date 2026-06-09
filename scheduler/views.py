@@ -240,23 +240,52 @@ def patient_detail(request, pk):
     })
 
 
-@require_POST
-def patient_add_session(request, pk):
-    """회차 +1 기록(오늘). 첫 회차면 시행중, 누적 5/10회 외래 알림, 한도(15회) 시 자동 종결."""
+def _record_session(patient):
+    """회차 +1 기록 + 한도/분기점 판단. (session, used, alert_text) 반환.
+
+    누적이 한도(기본 15)에 도달하면 자동 종결, 5/10회 도달 시 외래 내원 안내 문구.
+    """
     from .services import sessions as ssvc
-    patient = get_object_or_404(Patient, pk=pk)
     s = ssvc.add_session(patient)
     patient.refresh_from_db()
     used = patient.used_sessions
+    alert = ''
+    if used >= patient.target_sessions:
+        ssvc.complete(patient)
+        patient.refresh_from_db()
+        alert = f'🔚 {used}회 도달 — 한도 충족으로 종결 처리되었습니다.'
+    elif used in VISIT_MILESTONES:
+        alert = f'🏥 {used}회 도달 — 외래 내원이 필요합니다.'
+    return s, used, alert
+
+
+@require_POST
+def patient_add_session(request, pk):
+    """회차 +1 기록(오늘). 첫 회차면 시행중, 누적 5/10회 외래 알림, 한도(15회) 시 자동 종결."""
+    patient = get_object_or_404(Patient, pk=pk)
+    s, used, alert = _record_session(patient)
     messages.success(request, f'{patient.name} {s.number}회차 기록 (누적 {used}/{patient.target_sessions})')
     # 도수치료관리시스템(HIRA) 제출 리마인더 — 직접연동은 없으므로 알림만.
     messages.warning(request, '⚠ 도수치료관리시스템(HIRA)에 진료정보 제출(연동)을 잊지 마세요.')
-    if used >= patient.target_sessions:
-        ssvc.complete(patient)
-        messages.warning(request, f'🔚 {used}회 도달 — 한도 충족으로 종결 처리되었습니다.')
-    elif used in VISIT_MILESTONES:
-        messages.warning(request, f'🏥 {used}회 도달 — 외래 내원이 필요합니다.')
+    if alert:
+        messages.warning(request, alert)
     return redirect(request.POST.get('next') or reverse('patient_detail', args=[pk]))
+
+
+@require_POST
+def api_add_session(request):
+    """시간표 카드 더블클릭으로 회차 +1. JSON: patient_id."""
+    try:
+        data = json.loads(request.body)
+        patient = get_object_or_404(Patient, pk=data['patient_id'])
+    except (KeyError, ValueError) as e:
+        return JsonResponse({'ok': False, 'error': f'잘못된 요청: {e}'}, status=400)
+    s, used, alert = _record_session(patient)
+    return JsonResponse({
+        'ok': True, 'number': s.number, 'used': used,
+        'target': patient.target_sessions, 'status': patient.status,
+        'name': patient.name, 'alert': alert,
+    })
 
 
 @require_POST
