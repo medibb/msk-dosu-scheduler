@@ -39,7 +39,10 @@
   table.resv th, table.resv td { border:1px solid #e5e7eb; font-size:12px; }
   table.resv th { background:#f9fafb; padding:5px 8px; }
   table.resv td.periodcol { background:#f9fafb; color:#6b7280; padding:4px 8px; white-space:nowrap; width:48px; text-align:center; }
-  td.resv-cell { vertical-align:top; padding:4px; min-width:120px; height:40px; }
+  td.resv-cell { vertical-align:top; padding:4px; min-width:120px; height:44px; }
+  /* 빈 칸도 드롭 대상임을 점선으로 표시 */
+  td.resv-cell:empty::after { content:'＋'; display:block; color:#d1d5db; text-align:center;
+                              border:1px dashed #e5e7eb; border-radius:6px; padding:6px 0; font-size:13px; }
   td.resv-cell.dragover { background:#dbeafe; outline:2px dashed #2563eb; }
   td.resv-cell .card { background:#f0fdf4; border-color:#bbf7d0; margin-bottom:4px; }
 </style>
@@ -76,15 +79,7 @@
               <tr>
                 <td class="periodcol">{{ row.label }}</td>
                 {% for cell in row.cells %}
-                  <td class="resv-cell" data-reserve="1" data-weekday="{{ cell.weekday }}" data-period="{{ cell.period }}">
-                    {% for r in cell.reservations %}
-                      <div class="card" draggable="true"
-                           data-patient-id="{{ r.patient.id }}" data-reserved="1">
-                        <div class="nm">{{ r.patient.name }}</div>
-                        <div class="meta">{{ r.patient.category_label|default:r.patient.memo|truncatechars:14 }}</div>
-                      </div>
-                    {% endfor %}
-                  </td>
+                  <td class="resv-cell" data-reserve="1" data-weekday="{{ cell.weekday }}" data-period="{{ cell.period }}">{% for r in cell.reservations %}<div class="card" draggable="true" data-patient-id="{{ r.patient.id }}" data-reserved="1"><div class="nm">{{ r.patient.name }}</div><div class="meta">{{ r.patient.category_label|default:r.patient.memo|truncatechars:14 }}</div></div>{% endfor %}</td>
                 {% endfor %}
               </tr>
             {% endfor %}
@@ -179,5 +174,6 @@
   {% endif %}
 {% endblock %}
 {% block scripts %}
-  <script src="{% static 'js/schedule.js' %}"></script>
+  <!-- ?v= : 재빌드 후 브라우저가 옛 JS를 캐시하지 않도록 버전 무효화(코드 바꾸면 숫자 올림) -->
+  <script src="{% static 'js/schedule.js' %}?v=20260609b"></script>
 {% endblock %}
