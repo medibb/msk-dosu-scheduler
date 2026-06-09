@@ -18,6 +18,8 @@
   .card { background:#eff6ff; border:1px solid #bfdbfe; border-radius:6px; padding:4px 6px;
           font-size:13px; cursor:grab; user-select:none; }
   .card .nm { font-weight:600; }
+  .card .nm a { color:inherit; text-decoration:none; cursor:pointer; }
+  .card .nm a:hover { text-decoration:underline; }
   .card .meta { color:#6b7280; font-size:11px; }
   .card.fixed { background:#fef3c7; border-color:#fcd34d; }
   .waitlist-panel { width:240px; flex-shrink:0; }
@@ -95,7 +97,7 @@
                         <div class="card{% if a.is_fixed %} fixed{% endif %}" draggable="true"
                              data-patient-id="{{ a.patient.id }}" data-appointment-id="{{ a.id }}"
                              title="더블클릭: 스케줄 고정 토글">
-                          <div class="nm">{{ a.patient.name }}</div>
+                          <div class="nm"><a href="{% url 'patient_detail' a.patient.id %}" draggable="false">{{ a.patient.name }}</a></div>
                           <div class="meta">{{ a.patient.used_sessions }}/{{ a.patient.target_sessions }}</div>
                         </div>
                       {% endif %}
@@ -123,7 +125,7 @@
                         <div class="card{% if a.is_fixed %} fixed{% endif %}" draggable="true"
                              data-patient-id="{{ a.patient.id }}" data-appointment-id="{{ a.id }}"
                              title="더블클릭: 스케줄 고정 토글">
-                          <div class="nm">{{ a.patient.name }}</div>
+                          <div class="nm"><a href="{% url 'patient_detail' a.patient.id %}" draggable="false">{{ a.patient.name }}</a></div>
                           <div class="meta">{{ a.patient.category_label|default:a.patient.memo|truncatechars:14 }} · {{ a.patient.used_sessions }}/{{ a.patient.target_sessions }}</div>
                         </div>
                       {% endif %}
@@ -151,7 +153,7 @@
               <tr>
                 <td class="periodcol">{{ row.label }}</td>
                 {% for cell in row.cells %}
-                  <td class="resv-cell" data-reserve="1" data-weekday="{{ cell.weekday }}" data-period="{{ cell.period }}">{% for r in cell.reservations %}<div class="card" draggable="true" data-patient-id="{{ r.patient.id }}" data-reserved="1"><div class="nm">{{ r.patient.name }}</div><div class="meta">{{ r.patient.category_label|default:r.patient.memo|truncatechars:14 }}</div></div>{% endfor %}</td>
+                  <td class="resv-cell" data-reserve="1" data-weekday="{{ cell.weekday }}" data-period="{{ cell.period }}">{% for r in cell.reservations %}<div class="card" draggable="true" data-patient-id="{{ r.patient.id }}" data-reserved="1"><div class="nm"><a href="{% url 'patient_detail' r.patient.id %}" draggable="false">{{ r.patient.name }}</a></div><div class="meta">{{ r.patient.category_label|default:r.patient.memo|truncatechars:14 }}</div></div>{% endfor %}</td>
                 {% endfor %}
               </tr>
             {% endfor %}
@@ -165,7 +167,7 @@
       <div id="waitlist">
         {% for p in waitlist %}
           <div class="card" draggable="true" data-patient-id="{{ p.id }}">
-            <div class="nm">{{ p.name }}<span class="waitdays">{{ p.wait_days }}일</span><span class="prelim{% if p.prelim_n >= 4 %} done{% endif %}" title="선행치료 시행횟수">선행 {{ p.prelim_n }}</span></div>
+            <div class="nm"><a href="{% url 'patient_detail' p.id %}" draggable="false">{{ p.name }}</a><span class="waitdays">{{ p.wait_days }}일</span><span class="prelim{% if p.prelim_n >= 4 %} done{% endif %}" title="선행치료 시행횟수">선행 {{ p.prelim_n }}</span></div>
             <div class="meta">{{ p.category_label|default:p.memo|truncatechars:16 }}</div>
           </div>
         {% empty %}
