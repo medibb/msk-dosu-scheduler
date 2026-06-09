@@ -47,3 +47,25 @@ class SessionServiceTests(TestCase):
         self.assertEqual(self.p.end_date, date(2026, 6, 30))
         # 종결된 환자는 종결평가 대상이 아니다
         self.assertNotIn(self.p, svc.completion_due())
+
+    def test_prelim_session_count_and_done_at_4(self):
+        for _ in range(3):
+            svc.add_prelim_session(self.p)
+        self.assertEqual(self.p.prelim_count, 3)
+        self.assertFalse(self.p.is_prelim_done)
+        svc.add_prelim_session(self.p)        # 4회째 → 완료
+        self.assertEqual(self.p.prelim_count, 4)
+        self.assertTrue(self.p.is_prelim_done)
+
+    def test_prelim_does_not_change_status(self):
+        # 선행치료는 도수치료 상태(시행중)로 바꾸지 않는다
+        svc.add_prelim_session(self.p)
+        self.p.refresh_from_db()
+        self.assertEqual(self.p.status, Status.BOOKED)
+        self.assertEqual(self.p.session_count, 0)
+
+    def test_remove_last_prelim_session(self):
+        svc.add_prelim_session(self.p)
+        svc.add_prelim_session(self.p)
+        svc.remove_last_prelim_session(self.p)
+        self.assertEqual(self.p.prelim_count, 1)

@@ -15,6 +15,8 @@ urlpatterns = [
     path('patients/<int:pk>/status/', views.patient_set_status, name='patient_set_status'),
     path('patients/<int:pk>/session/add/', views.patient_add_session, name='patient_add_session'),
     path('patients/<int:pk>/session/undo/', views.patient_undo_session, name='patient_undo_session'),
+    path('patients/<int:pk>/prelim/add/', views.patient_add_prelim, name='patient_add_prelim'),
+    path('patients/<int:pk>/prelim/undo/', views.patient_undo_prelim, name='patient_undo_prelim'),
 
     path('api/place/', views.api_place, name='api_place'),
     path('api/unassign/', views.api_unassign, name='api_unassign'),

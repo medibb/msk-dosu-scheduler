@@ -1,6 +1,7 @@
 from django.contrib import admin
 
-from .models import Appointment, Patient, Reservation, Session, Settings, Therapist
+from .models import (Appointment, Patient, PrelimSession, Reservation, Session,
+                     Settings, Therapist)
 
 
 @admin.register(Therapist)
@@ -33,6 +34,12 @@ class ReservationAdmin(admin.ModelAdmin):
 
 @admin.register(Session)
 class SessionAdmin(admin.ModelAdmin):
+    list_display = ('patient', 'number', 'date')
+    list_filter = ('date',)
+
+
+@admin.register(PrelimSession)
+class PrelimSessionAdmin(admin.ModelAdmin):
     list_display = ('patient', 'number', 'date')
     list_filter = ('date',)
 

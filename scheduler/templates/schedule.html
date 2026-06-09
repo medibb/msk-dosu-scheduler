@@ -28,6 +28,9 @@
   #waitlist .card { margin-bottom:6px; }
   .waitdays { display:inline-block; font-size:11px; color:#b45309; background:#fef3c7;
               border-radius:8px; padding:0 6px; margin-left:4px; }
+  .prelim { display:inline-block; font-size:11px; color:#6b7280; background:#e5e7eb;
+            border-radius:8px; padding:0 6px; margin-left:4px; }
+  .prelim.done { color:#fff; background:#16a34a; font-weight:600; }
   .therapist-tabs { display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap; }
   .therapist-tabs a { padding:6px 14px; border:1px solid #d1d5db; border-radius:20px;
                       text-decoration:none; color:#374151; font-size:14px; }
@@ -162,7 +165,7 @@
       <div id="waitlist">
         {% for p in waitlist %}
           <div class="card" draggable="true" data-patient-id="{{ p.id }}">
-            <div class="nm">{{ p.name }}<span class="waitdays">{{ p.wait_days }}일</span></div>
+            <div class="nm">{{ p.name }}<span class="waitdays">{{ p.wait_days }}일</span><span class="prelim{% if p.prelim_n >= 4 %} done{% endif %}" title="선행치료 시행횟수">선행 {{ p.prelim_n }}</span></div>
             <div class="meta">{{ p.category_label|default:p.memo|truncatechars:16 }}</div>
           </div>
         {% empty %}

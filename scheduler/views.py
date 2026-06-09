@@ -30,7 +30,9 @@ def schedule(request):
 
     # 대기자: 대기일수(처방일 기준, 없으면 등록일) 계산 후 오래 기다린 순 정렬
     today = timezone.localdate()
-    waitlist = list(Patient.objects.filter(status=Status.WAITING))
+    waitlist = list(
+        Patient.objects.filter(status=Status.WAITING)
+        .annotate(prelim_n=Count('prelim_sessions')))
     for p in waitlist:
         base = p.prescription_date or timezone.localtime(p.created_at).date()
         p.wait_days = (today - base).days
@@ -227,11 +229,13 @@ def patient_edit(request, pk):
 
 def patient_detail(request, pk):
     patient = get_object_or_404(
-        Patient.objects.select_related('therapist').prefetch_related('sessions'), pk=pk)
+        Patient.objects.select_related('therapist')
+        .prefetch_related('sessions', 'prelim_sessions'), pk=pk)
     return render(request, 'patient_detail.html', {
         'patient': patient,
         'next_status': NEXT_STATUS.get(patient.status),
         'sessions': patient.sessions.all(),
+        'prelim_sessions': patient.prelim_sessions.all(),
     })
 
 
@@ -242,6 +246,8 @@ def patient_add_session(request, pk):
     patient = get_object_or_404(Patient, pk=pk)
     s = ssvc.add_session(patient)
     messages.success(request, f'{patient.name} {s.number}회차 기록')
+    # 도수치료관리시스템(HIRA) 제출 리마인더 — 직접연동은 없으므로 알림만.
+    messages.warning(request, '⚠ 도수치료관리시스템(HIRA)에 진료정보 제출(연동)을 잊지 마세요.')
     return redirect(request.POST.get('next') or reverse('patient_detail', args=[pk]))
 
 
@@ -252,6 +258,28 @@ def patient_undo_session(request, pk):
     patient = get_object_or_404(Patient, pk=pk)
     ssvc.remove_last_session(patient)
     messages.success(request, '마지막 회차를 취소했습니다.')
+    return redirect(reverse('patient_detail', args=[pk]))
+
+
+@require_POST
+def patient_add_prelim(request, pk):
+    """선행치료 +1 기록(오늘 날짜). 4회 충족 시 도수치료 전환 가능 안내."""
+    from .services import sessions as ssvc
+    patient = get_object_or_404(Patient, pk=pk)
+    s = ssvc.add_prelim_session(patient)
+    messages.success(request, f'{patient.name} 선행치료 {s.number}회 기록')
+    if patient.is_prelim_done:
+        messages.warning(request, '✅ 선행치료 4회 완료 — 도수치료 전환이 가능합니다.')
+    return redirect(request.POST.get('next') or reverse('patient_detail', args=[pk]))
+
+
+@require_POST
+def patient_undo_prelim(request, pk):
+    """마지막 선행치료 취소(오기록 정정)."""
+    from .services import sessions as ssvc
+    patient = get_object_or_404(Patient, pk=pk)
+    ssvc.remove_last_prelim_session(patient)
+    messages.success(request, '마지막 선행치료를 취소했습니다.')
     return redirect(reverse('patient_detail', args=[pk]))
 
 

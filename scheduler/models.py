@@ -30,6 +30,10 @@ class Period(models.IntegerChoices):
     PM = 1, '오후'
 
 
+# 도수치료 전 선행치료(기본물리/단순재활) 최소 요건: 2주 이상 + 4회 이상
+PRELIM_REQUIRED = 4
+
+
 class Category(models.TextChoices):
     """부위/단계 분류(v2). 처방코드 단일화에 따라 등록 시 이 분류를 선택한다."""
     LUMBAR1 = 'lumbar1', 'Lumbar phase1'
@@ -141,6 +145,15 @@ class Patient(models.Model):
         """종결 목표 회차 도달(미종결 상태)이면 종결평가 대상."""
         return self.status != Status.DONE and self.session_count >= self.target_sessions
 
+    @property
+    def prelim_count(self):
+        return self.prelim_sessions.count()
+
+    @property
+    def is_prelim_done(self):
+        """선행치료 요건(기본물리/단순재활 최소 4회) 충족 → 도수치료 전환 가능."""
+        return self.prelim_count >= PRELIM_REQUIRED
+
 
 class Appointment(models.Model):
     """주간 시간표의 한 칸 배정(요일×시간대). 매주 반복."""
@@ -205,6 +218,26 @@ class Session(models.Model):
 
     def __str__(self):
         return f'{self.patient.name} {self.number}회'
+
+
+class PrelimSession(models.Model):
+    """선행치료(기본물리치료/단순재활치료) 실시 기록.
+
+    도수치료 관리급여 전환 전 '2주 이상·4회 이상' 선행치료 요건을 추적한다.
+    도수치료 회차(Session)와 별개로 카운트한다.
+    """
+    patient = models.ForeignKey(
+        Patient, on_delete=models.CASCADE, related_name='prelim_sessions',
+    )
+    date = models.DateField('실시일')
+    number = models.IntegerField('회차')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['number']
+
+    def __str__(self):
+        return f'{self.patient.name} 선행 {self.number}회'
 
 
 class Settings(models.Model):

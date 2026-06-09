@@ -1,7 +1,7 @@
-"""회차/진행 추적: 회차 기록, 종결평가 대상 조회, 종결 처리."""
+"""회차/진행 추적: 회차 기록, 선행치료 기록, 종결평가 대상 조회, 종결 처리."""
 from django.utils import timezone
 
-from ..models import Patient, Session, Status
+from ..models import Patient, PrelimSession, Session, Status
 
 
 def add_session(patient, on_date=None):
@@ -26,6 +26,21 @@ def add_session(patient, on_date=None):
 def remove_last_session(patient):
     """마지막 회차 1건 취소(오기록 정정용)."""
     last = patient.sessions.order_by('-number').first()
+    if last:
+        last.delete()
+    return last
+
+
+def add_prelim_session(patient, on_date=None):
+    """선행치료 1회 기록(도수치료 회차와 별개, 상태 변경 없음)."""
+    on_date = on_date or timezone.localdate()
+    next_num = patient.prelim_count + 1
+    return PrelimSession.objects.create(patient=patient, number=next_num, date=on_date)
+
+
+def remove_last_prelim_session(patient):
+    """마지막 선행치료 1건 취소(오기록 정정용)."""
+    last = patient.prelim_sessions.order_by('-number').first()
     if last:
         last.delete()
     return last
