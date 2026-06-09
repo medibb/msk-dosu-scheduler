@@ -55,10 +55,10 @@ def complete(patient, on_date=None):
 
 
 def completion_due():
-    """종결 목표 회차에 도달했지만 아직 종결되지 않은 환자 목록."""
+    """한도 회차(본원+타병원)에 도달했지만 아직 종결되지 않은 환자 목록."""
     due = []
     qs = Patient.objects.exclude(status=Status.DONE).prefetch_related('sessions')
     for p in qs:
-        if p.session_count >= p.target_sessions:
+        if p.used_sessions >= p.target_sessions:
             due.append(p)
     return due

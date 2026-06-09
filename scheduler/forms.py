@@ -10,13 +10,17 @@ class PatientForm(forms.ModelForm):
     - 처방코드 → 부위/단계(category) 8분류 선택('기타'는 직접 입력)
     - 담당치료사/상태는 주간 시간표 drag&drop으로 결정(상태 기본 대기중)
     """
+    external_sessions = forms.IntegerField(
+        required=False, min_value=0, initial=0, label='타병원 기시행 횟수',
+        help_text='타병원에서 이미 받은 도수치료 횟수(15회 한도에 포함)')
+
     class Meta:
         model = Patient
         fields = [
             'registration_number', 'name', 'age', 'sex',
             'prescription_date', 'category', 'category_etc',
             'memo', 'phone', 'preferred_days', 'preferred_times',
-            'target_sessions', 'completion_eval_date', 'note',
+            'target_sessions', 'external_sessions', 'completion_eval_date', 'note',
             'last_contact_date', 'contact_result',
         ]
         widgets = {
@@ -32,4 +36,7 @@ class PatientForm(forms.ModelForm):
         # '기타'가 아니면 기타 입력값은 비운다.
         if cleaned.get('category') != 'etc':
             cleaned['category_etc'] = ''
+        # 타병원 횟수 미입력 시 0
+        if not cleaned.get('external_sessions'):
+            cleaned['external_sessions'] = 0
         return cleaned

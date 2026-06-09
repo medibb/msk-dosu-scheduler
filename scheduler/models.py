@@ -33,6 +33,11 @@ class Period(models.IntegerChoices):
 # 도수치료 전 선행치료(기본물리/단순재활) 최소 요건: 2주 이상 + 4회 이상
 PRELIM_REQUIRED = 4
 
+# 관리급여 연간 도수치료 한도(본원+타병원 합산)
+SESSION_LIMIT = 15
+# 외래 내원이 필요한 회차(누적). 15회는 종결과 겹친다.
+VISIT_MILESTONES = (5, 10, 15)
+
 
 class Category(models.TextChoices):
     """부위/단계 분류(v2). 처방코드 단일화에 따라 등록 시 이 분류를 선택한다."""
@@ -113,7 +118,10 @@ class Patient(models.Model):
     last_contact_date = models.DateField('마지막연락일', null=True, blank=True)
     contact_result = models.CharField('연락결과', max_length=255, blank=True)
 
-    target_sessions = models.IntegerField('종결 목표 회차', default=6)
+    # 관리급여: 연간 총 15회 한도(본원+타병원 합산). 골절/강직 등 예외는 환자별 조정.
+    target_sessions = models.IntegerField('연간 도수 한도(회)', default=SESSION_LIMIT)
+    # 타병원에서 이미 시행한 도수치료 횟수(15회 한도에 포함)
+    external_sessions = models.IntegerField('타병원 기시행 횟수', default=0)
     completion_eval_date = models.DateField('종결평가 예정일', null=True, blank=True)
     start_date = models.DateField('도수 시작일', null=True, blank=True)
     end_date = models.DateField('도수 종결일', null=True, blank=True)
@@ -141,9 +149,19 @@ class Patient(models.Model):
         return ''
 
     @property
+    def used_sessions(self):
+        """15회 한도에 쓰인 총 횟수 = 본원 시행 + 타병원 기시행."""
+        return self.session_count + self.external_sessions
+
+    @property
     def is_completion_due(self):
-        """종결 목표 회차 도달(미종결 상태)이면 종결평가 대상."""
-        return self.status != Status.DONE and self.session_count >= self.target_sessions
+        """한도 회차 도달(미종결 상태)이면 종결평가 대상."""
+        return self.status != Status.DONE and self.used_sessions >= self.target_sessions
+
+    @property
+    def at_visit_milestone(self):
+        """현재 누적 횟수가 외래 내원 분기점(5/10/15)이면 그 값, 아니면 None."""
+        return self.used_sessions if self.used_sessions in VISIT_MILESTONES else None
 
     @property
     def prelim_count(self):

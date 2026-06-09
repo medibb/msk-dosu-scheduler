@@ -68,6 +68,39 @@ class PatientViewTests(TestCase):
         self.assertContains(resp, f'therapist={self.t.id}')
         self.assertContains(resp, 'sort=name')
 
+    def test_external_sessions_count_toward_limit(self):
+        p = Patient.objects.create(registration_number='400', name='외부환자',
+                                   status=Status.ONGOING, external_sessions=3)
+        self.assertEqual(p.used_sessions, 3)
+
+    def test_15th_session_auto_completes(self):
+        p = Patient.objects.create(registration_number='401', name='한도환자',
+                                   status=Status.ONGOING, external_sessions=14, target_sessions=15)
+        resp = self.client.post(reverse('patient_add_session', args=[p.pk]), follow=True)
+        p.refresh_from_db()
+        self.assertEqual(p.used_sessions, 15)
+        self.assertEqual(p.status, Status.DONE)       # 자동 종결
+        self.assertIsNotNone(p.end_date)
+        self.assertContains(resp, '종결')
+
+    def test_5th_session_shows_outpatient_alert(self):
+        p = Patient.objects.create(registration_number='402', name='외래환자',
+                                   status=Status.ONGOING, external_sessions=4, target_sessions=15)
+        resp = self.client.post(reverse('patient_add_session', args=[p.pk]), follow=True)
+        p.refresh_from_db()
+        self.assertEqual(p.status, Status.ONGOING)    # 5회는 종결 아님
+        self.assertContains(resp, '외래 내원')
+
+    def test_undo_session_reverts_auto_completion(self):
+        p = Patient.objects.create(registration_number='403', name='취소환자',
+                                   status=Status.ONGOING, external_sessions=14, target_sessions=15)
+        self.client.post(reverse('patient_add_session', args=[p.pk]))  # → 15회 자동 종결
+        p.refresh_from_db()
+        self.assertEqual(p.status, Status.DONE)
+        self.client.post(reverse('patient_undo_session', args=[p.pk]))  # 회차 취소
+        p.refresh_from_db()
+        self.assertEqual(p.status, Status.ONGOING)    # 다시 시행중
+
     def test_status_transition_advances_one_step(self):
         self.client.post(reverse('patient_set_status', args=[self.p1.pk]))
         self.p1.refresh_from_db()

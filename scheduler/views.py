@@ -11,7 +11,8 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from .forms import PatientForm
-from .models import Appointment, Patient, Settings, Status, Therapist
+from .models import (Appointment, Patient, Settings, Status, Therapist,
+                     VISIT_MILESTONES)
 from .services import schedule as sch
 
 # 상태 흐름: 다음 단계로 한 번에 전진
@@ -63,7 +64,7 @@ def _json_patient_card(appt):
         'patient_id': p.pk,
         'name': p.name,
         'memo': p.memo,
-        'sessions': f'{p.session_count}/{p.target_sessions}',
+        'sessions': f'{p.used_sessions}/{p.target_sessions}',
         'is_fixed': appt.is_fixed,
     }
 
@@ -241,22 +242,35 @@ def patient_detail(request, pk):
 
 @require_POST
 def patient_add_session(request, pk):
-    """회차 +1 기록(오늘 날짜). 첫 회차면 시행중 전환."""
+    """회차 +1 기록(오늘). 첫 회차면 시행중, 누적 5/10회 외래 알림, 한도(15회) 시 자동 종결."""
     from .services import sessions as ssvc
     patient = get_object_or_404(Patient, pk=pk)
     s = ssvc.add_session(patient)
-    messages.success(request, f'{patient.name} {s.number}회차 기록')
+    patient.refresh_from_db()
+    used = patient.used_sessions
+    messages.success(request, f'{patient.name} {s.number}회차 기록 (누적 {used}/{patient.target_sessions})')
     # 도수치료관리시스템(HIRA) 제출 리마인더 — 직접연동은 없으므로 알림만.
     messages.warning(request, '⚠ 도수치료관리시스템(HIRA)에 진료정보 제출(연동)을 잊지 마세요.')
+    if used >= patient.target_sessions:
+        ssvc.complete(patient)
+        messages.warning(request, f'🔚 {used}회 도달 — 한도 충족으로 종결 처리되었습니다.')
+    elif used in VISIT_MILESTONES:
+        messages.warning(request, f'🏥 {used}회 도달 — 외래 내원이 필요합니다.')
     return redirect(request.POST.get('next') or reverse('patient_detail', args=[pk]))
 
 
 @require_POST
 def patient_undo_session(request, pk):
-    """마지막 회차 취소(오기록 정정)."""
+    """마지막 회차 취소(오기록 정정). 자동 종결됐던 환자는 시행중으로 되돌린다."""
     from .services import sessions as ssvc
     patient = get_object_or_404(Patient, pk=pk)
-    ssvc.remove_last_session(patient)
+    removed = ssvc.remove_last_session(patient)
+    patient.refresh_from_db()
+    # 실제로 회차가 삭제됐고, 한도 미만으로 떨어졌으면 자동 종결을 되돌린다.
+    if removed and patient.status == Status.DONE and patient.used_sessions < patient.target_sessions:
+        patient.status = Status.ONGOING
+        patient.end_date = None
+        patient.save(update_fields=['status', 'end_date', 'updated_at'])
     messages.success(request, '마지막 회차를 취소했습니다.')
     return redirect(reverse('patient_detail', args=[pk]))
 

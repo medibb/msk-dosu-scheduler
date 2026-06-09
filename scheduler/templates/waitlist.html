@@ -59,7 +59,7 @@
           <td>{{ p.category_label|default:'-' }}</td>
           <td>{{ p.memo }}</td>
           <td>{{ p.therapist.name|default:'-' }}</td>
-          <td>{{ p.session_count }}/{{ p.target_sessions }}</td>
+          <td>{{ p.used_sessions }}/{{ p.target_sessions }}</td>
           <td>{{ p.prescription_date|date:'Y-m-d'|default:'-' }}</td>
         </tr>
       {% empty %}

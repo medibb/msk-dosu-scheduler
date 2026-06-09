@@ -96,7 +96,7 @@
                              data-patient-id="{{ a.patient.id }}" data-appointment-id="{{ a.id }}"
                              title="더블클릭: 스케줄 고정 토글">
                           <div class="nm">{{ a.patient.name }}</div>
-                          <div class="meta">{{ a.patient.session_count }}/{{ a.patient.target_sessions }}</div>
+                          <div class="meta">{{ a.patient.used_sessions }}/{{ a.patient.target_sessions }}</div>
                         </div>
                       {% endif %}
                     {% endwith %}
@@ -124,7 +124,7 @@
                              data-patient-id="{{ a.patient.id }}" data-appointment-id="{{ a.id }}"
                              title="더블클릭: 스케줄 고정 토글">
                           <div class="nm">{{ a.patient.name }}</div>
-                          <div class="meta">{{ a.patient.category_label|default:a.patient.memo|truncatechars:14 }} · {{ a.patient.session_count }}/{{ a.patient.target_sessions }}</div>
+                          <div class="meta">{{ a.patient.category_label|default:a.patient.memo|truncatechars:14 }} · {{ a.patient.used_sessions }}/{{ a.patient.target_sessions }}</div>
                         </div>
                       {% endif %}
                     {% endwith %}
