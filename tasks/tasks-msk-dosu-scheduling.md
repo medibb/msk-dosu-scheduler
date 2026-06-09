@@ -85,3 +85,13 @@ PRD: `tasks/prd-msk-dosu-scheduling.md`
   - [x] 5.2 통계 화면(`stats.html`): 기간 선택(프리셋+직접) + 집계 표
   - [x] 5.3 CSV 내보내기(utf-8-sig, Excel 한글 호환)
   - [x] 5.4 최종 점검: 전체 흐름(임포트→대기→배정→회차→종결→통계) E2E 스모크 검증 통과
+
+- [x] 6.0 v2 UI 개선 (전체보기·예약대기칸·대기일수, 환자등록 간략화, 상태흐름 개정) — 브랜치 `feature/patients_ui`
+  - [x] 6.1 데이터 모델: `Category`(부위/단계 8분류)·`Period`(오전/오후) choices, `Patient.category`/`category_etc` 필드, `Reservation`(예약대기칸: patient OneToOne, weekday, period, order) 모델 + 마이그레이션(0003)
+  - [x] 6.2 스케줄 서비스(`services/schedule.py`): 배정 시 상태 `시행중`으로 변경 + 환자에 치료사 기록, `reserve()/unreserve()`(예약완료 전환), `build_grid_all()`(요일×치료사 전체 그리드), `build_reservation_grid()`(요일×오전/오후)
+  - [x] 6.3 뷰/URL: `schedule`에 전체/치료사별 보기 분기 + 대기자 대기일수 계산·정렬, `api_reserve`/`api_unreserve` 추가
+  - [x] 6.4 환자 폼(`forms.py`): 처방코드/외래/진료과/담당치료사/상태 제거, `category`(+기타 직접입력) 추가
+  - [x] 6.5 시간표 템플릿(`schedule.html`): 전체 탭(요일×치료사) + 치료사별 탭, 예약대기칸 블록, 대기자 대기일수 표기
+  - [x] 6.6 DnD JS(`schedule.js`): 칸별 치료사 인식(전체보기 대응), 예약대기칸 드롭(reserve)·복귀(unreserve) 처리
+  - [x] 6.7 환자 폼/상세/대기자 템플릿: 부위/단계 표시(`category_label`), 기타 입력 토글 JS, 제거된 항목 정리
+  - [x] 6.8 테스트 갱신: 배정→시행중, 환자등록(category), 예약대기칸(reserve/unreserve) + 전체 회귀 통과(53개)

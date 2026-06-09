@@ -3,7 +3,7 @@ import json
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
-from scheduler.models import Appointment, Patient, Status, Therapist
+from scheduler.models import Appointment, Patient, Reservation, Status, Therapist
 from scheduler.services import schedule as sch
 
 
@@ -16,11 +16,13 @@ class ScheduleServiceTests(TestCase):
         self.p2 = Patient.objects.create(
             registration_number='2', name='나환자', status=Status.WAITING)
 
-    def test_place_creates_appointment_and_books_patient(self):
+    def test_place_creates_appointment_starts_patient_and_records_therapist(self):
         appt = sch.place(self.p1, self.t, weekday=0, slot_index=0)
         self.assertIsNotNone(appt.pk)
         self.p1.refresh_from_db()
-        self.assertEqual(self.p1.status, Status.BOOKED)
+        # v2: 시간표 배정 → 시행중 + 담당치료사 기록
+        self.assertEqual(self.p1.status, Status.ONGOING)
+        self.assertEqual(self.p1.therapist, self.t)
 
     def test_place_conflict_when_cell_occupied(self):
         sch.place(self.p1, self.t, 0, 0)
@@ -65,6 +67,47 @@ class ScheduleServiceTests(TestCase):
         self.assertTrue(sch.toggle_fixed(appt))
         self.assertFalse(sch.toggle_fixed(appt))
 
+    def test_reserve_sets_booked(self):
+        sch.reserve(self.p1, weekday=0, period=0)
+        self.p1.refresh_from_db()
+        self.assertEqual(self.p1.status, Status.BOOKED)
+        self.assertEqual(Reservation.objects.filter(patient=self.p1).count(), 1)
+
+    def test_reserve_is_single_slot_per_patient(self):
+        sch.reserve(self.p1, weekday=0, period=0)
+        sch.reserve(self.p1, weekday=2, period=1)  # 다른 칸으로 이동
+        self.assertEqual(Reservation.objects.filter(patient=self.p1).count(), 1)
+        r = Reservation.objects.get(patient=self.p1)
+        self.assertEqual((r.weekday, r.period), (2, 1))
+
+    def test_unreserve_reverts_to_waiting(self):
+        sch.reserve(self.p1, 0, 0)
+        sch.unreserve(self.p1)
+        self.p1.refresh_from_db()
+        self.assertEqual(self.p1.status, Status.WAITING)
+        self.assertFalse(Reservation.objects.filter(patient=self.p1).exists())
+
+    def test_place_clears_reservation(self):
+        sch.reserve(self.p1, 0, 0)
+        sch.place(self.p1, self.t, 0, 0)
+        self.assertFalse(Reservation.objects.filter(patient=self.p1).exists())
+        self.p1.refresh_from_db()
+        self.assertEqual(self.p1.status, Status.ONGOING)
+
+    def test_build_reservation_grid_shape(self):
+        sch.reserve(self.p1, weekday=0, period=0)  # 월 오전
+        rows = sch.build_reservation_grid()
+        self.assertEqual(len(rows), 2)             # 오전/오후
+        self.assertEqual(len(rows[0]['cells']), 5)  # 월~금
+        self.assertEqual(rows[0]['cells'][0]['reservations'][0].patient, self.p1)
+
+    def test_build_grid_all_has_cell_per_therapist(self):
+        sch.place(self.p1, self.t, 0, 0)
+        rows = sch.build_grid_all([self.t, self.t2])
+        self.assertEqual(len(rows), 10)
+        self.assertEqual(len(rows[0]['cells']), 5 * 2)  # 요일×치료사
+        self.assertEqual(rows[0]['cells'][0]['appointment'].patient, self.p1)
+
 
 @override_settings(APP_PASSWORD='pw')
 class ScheduleApiTests(TestCase):
@@ -104,3 +147,21 @@ class ScheduleApiTests(TestCase):
         resp = self._post('api_unassign', {'appointment_id': appt.id})
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(Appointment.objects.count(), 0)
+
+    def test_api_reserve_and_unreserve(self):
+        resp = self._post('api_reserve', {
+            'patient_id': self.p1.id, 'weekday': 0, 'period': 0})
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.json()['ok'])
+        self.assertEqual(Reservation.objects.filter(patient=self.p1).count(), 1)
+
+        resp = self._post('api_unreserve', {'patient_id': self.p1.id})
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(Reservation.objects.filter(patient=self.p1).exists())
+
+    def test_schedule_all_view_renders(self):
+        sch.place(self.p1, self.t, 0, 0)
+        resp = self.client.get(reverse('schedule'))   # 전체 보기(기본)
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, '전체')
+        self.assertContains(resp, '예약 대기')

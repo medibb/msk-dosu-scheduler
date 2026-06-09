@@ -21,25 +21,35 @@ NEXT_STATUS = {
 
 
 def schedule(request):
-    """주간 시간표 그리드. 치료사별 보기 + 대기자 드래그 소스."""
+    """주간 시간표 그리드. 전체 보기(기본) + 치료사별 보기 + 예약 대기칸 + 대기자."""
     therapists = list(Therapist.objects.filter(is_active=True))
     if not therapists:
         return render(request, 'schedule.html', {'no_therapist': True})
 
-    tid = request.GET.get('therapist')
-    current = next((t for t in therapists if str(t.id) == tid), therapists[0])
+    # 대기자: 대기일수(처방일 기준, 없으면 등록일) 계산 후 오래 기다린 순 정렬
+    today = timezone.localdate()
+    waitlist = list(Patient.objects.filter(status=Status.WAITING))
+    for p in waitlist:
+        base = p.prescription_date or timezone.localtime(p.created_at).date()
+        p.wait_days = (today - base).days
+    waitlist.sort(key=lambda p: p.wait_days, reverse=True)
 
-    grid = sch.build_grid(current)
-    # 드래그 소스: 아직 배정 안 된(대기중) 환자 + 이 치료사 배정 환자
-    waitlist = Patient.objects.filter(status=Status.WAITING).order_by('-prescription_date')[:100]
-
-    return render(request, 'schedule.html', {
+    ctx = {
         'therapists': therapists,
-        'current': current,
-        'grid': grid,
         'weekdays': ['월', '화', '수', '목', '금'],
         'waitlist': waitlist,
-    })
+        'reservation_rows': sch.build_reservation_grid(),
+    }
+
+    tid = request.GET.get('therapist')
+    current = next((t for t in therapists if str(t.id) == tid), None)
+    if current is not None:
+        # 치료사별 보기
+        ctx.update(view='single', current=current, grid=sch.build_grid(current))
+    else:
+        # 전체 보기(기본): 요일×치료사
+        ctx.update(view='all', grid_all=sch.build_grid_all(therapists))
+    return render(request, 'schedule.html', ctx)
 
 
 def _json_patient_card(appt):
@@ -79,6 +89,31 @@ def api_unassign(request):
     data = json.loads(request.body)
     appt = get_object_or_404(Appointment, pk=data['appointment_id'])
     sch.unassign(appt)
+    return JsonResponse({'ok': True})
+
+
+@require_POST
+def api_reserve(request):
+    """예약 대기칸에 환자 등록. JSON: patient_id, weekday, period(0=오전,1=오후)."""
+    try:
+        data = json.loads(request.body)
+        patient = get_object_or_404(Patient, pk=data['patient_id'])
+        sch.reserve(patient, int(data['weekday']), int(data['period']))
+    except (KeyError, ValueError) as e:
+        return JsonResponse({'ok': False, 'error': f'잘못된 요청: {e}'}, status=400)
+    return JsonResponse({'ok': True, 'card': {
+        'patient_id': patient.pk,
+        'name': patient.name,
+        'memo': patient.category_label or patient.memo,
+    }})
+
+
+@require_POST
+def api_unreserve(request):
+    """예약 대기칸에서 환자 제거(대기자로 복귀). JSON: patient_id."""
+    data = json.loads(request.body)
+    patient = get_object_or_404(Patient, pk=data['patient_id'])
+    sch.unreserve(patient)
     return JsonResponse({'ok': True})
 
 

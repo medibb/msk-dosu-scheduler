@@ -33,7 +33,7 @@
   <table class="list">
     <thead>
       <tr>
-        <th>상태</th><th>성명</th><th>등록번호</th><th>처방</th><th>메모</th>
+        <th>상태</th><th>성명</th><th>등록번호</th><th>부위/단계</th><th>메모</th>
         <th>치료사</th><th>회차</th><th>처방일</th>
       </tr>
     </thead>
@@ -43,7 +43,7 @@
           <td><span class="badge status-{{ p.status }}">{{ p.status }}</span></td>
           <td><a href="{% url 'patient_detail' p.pk %}">{{ p.name }}</a></td>
           <td>{{ p.registration_number }}</td>
-          <td>{{ p.get_prescription_code_display }}{% if p.is_outpatient %} 외{% endif %}</td>
+          <td>{{ p.category_label|default:'-' }}</td>
           <td>{{ p.memo }}</td>
           <td>{{ p.therapist.name|default:'-' }}</td>
           <td>{{ p.session_count }}/{{ p.target_sessions }}</td>

@@ -24,6 +24,24 @@ class Weekday(models.IntegerChoices):
     FRI = 4, '금'
 
 
+class Period(models.IntegerChoices):
+    """예약 대기칸 구분: 오전/오후."""
+    AM = 0, '오전'
+    PM = 1, '오후'
+
+
+class Category(models.TextChoices):
+    """부위/단계 분류(v2). 처방코드 단일화에 따라 등록 시 이 분류를 선택한다."""
+    LUMBAR1 = 'lumbar1', 'Lumbar phase1'
+    LUMBAR2 = 'lumbar2', 'Lumbar phase2'
+    LUMBAR3 = 'lumbar3', 'Lumbar phase3'
+    CERVICAL = 'cervical', 'Cervical'
+    SHOULDER1 = 'shoulder1', 'Shoulder phase1'
+    SHOULDER2 = 'shoulder2', 'Shoulder phase2'
+    SHOULDER3 = 'shoulder3', 'Shoulder phase3'
+    ETC = 'etc', '기타'
+
+
 class Status(models.TextChoices):
     WAITING = '대기중', '대기중'
     BOOKED = '예약완료', '예약완료'
@@ -68,6 +86,9 @@ class Patient(models.Model):
         '처방코드', max_length=4, choices=PrescriptionCode.choices,
         default=PrescriptionCode.SIMPLE,
     )
+    # v2: 부위/단계 분류(처방코드 단일화). '기타'면 category_etc에 자유 입력.
+    category = models.CharField('부위/단계', max_length=10, choices=Category.choices, blank=True)
+    category_etc = models.CharField('부위/단계(기타)', max_length=100, blank=True)
     is_outpatient = models.BooleanField('외래(외)', default=True)
     memo = models.CharField('환자 메모', max_length=255, blank=True)  # 부위/상병
     department = models.CharField('진료과', max_length=50, default='재활의학과', blank=True)
@@ -107,6 +128,15 @@ class Patient(models.Model):
         return self.sessions.count()
 
     @property
+    def category_label(self):
+        """부위/단계 표시값. 기타면 직접 입력값, 미지정이면 빈 문자열."""
+        if self.category == Category.ETC:
+            return self.category_etc or '기타'
+        if self.category:
+            return self.get_category_display()
+        return ''
+
+    @property
     def is_completion_due(self):
         """종결 목표 회차 도달(미종결 상태)이면 종결평가 대상."""
         return self.status != Status.DONE and self.session_count >= self.target_sessions
@@ -137,6 +167,28 @@ class Appointment(models.Model):
 
     def __str__(self):
         return f'{self.get_weekday_display()} {self.slot_index} - {self.patient.name}'
+
+
+class Reservation(models.Model):
+    """예약 대기칸: 요일(월~금)×오전/오후 별 '다음 차례' 대기열.
+
+    주간 시간표가 가득 찬 상황에서, 해당 요일·시간대에 자리가 나면
+    다음으로 시작할 환자를 순번대로 모아둔다. 치료사는 구분하지 않는다.
+    한 환자는 한 칸에만 존재한다(OneToOne).
+    """
+    patient = models.OneToOneField(
+        Patient, on_delete=models.CASCADE, related_name='reservation',
+    )
+    weekday = models.IntegerField('요일', choices=Weekday.choices)
+    period = models.IntegerField('시간대', choices=Period.choices)
+    order = models.IntegerField('순번', default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['weekday', 'period', 'order', 'created_at']
+
+    def __str__(self):
+        return f'{self.get_weekday_display()} {self.get_period_display()} - {self.patient.name}'
 
 
 class Session(models.Model):

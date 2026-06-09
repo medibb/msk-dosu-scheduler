@@ -36,13 +36,24 @@ class PatientViewTests(TestCase):
         self.assertNotContains(resp, '김철수')
 
     def test_create_patient(self):
+        # v2: 처방코드/상태/진료과/담당치료사 입력 없이 부위/단계(category)로 등록
         resp = self.client.post(reverse('patient_create'), {
             'registration_number': '300', 'name': '이영희',
-            'prescription_code': '간단', 'status': Status.WAITING,
-            'department': '재활의학과', 'target_sessions': 6,
+            'category': 'lumbar1', 'target_sessions': 6,
         })
         self.assertEqual(resp.status_code, 302)
-        self.assertTrue(Patient.objects.filter(name='이영희').exists())
+        p = Patient.objects.get(name='이영희')
+        self.assertEqual(p.status, Status.WAITING)   # 기본 대기중
+        self.assertEqual(p.category, 'lumbar1')
+
+    def test_create_patient_etc_category(self):
+        resp = self.client.post(reverse('patient_create'), {
+            'registration_number': '301', 'name': '박기타',
+            'category': 'etc', 'category_etc': 'Knee 재활', 'target_sessions': 6,
+        })
+        self.assertEqual(resp.status_code, 302)
+        p = Patient.objects.get(name='박기타')
+        self.assertEqual(p.category_label, 'Knee 재활')
 
     def test_status_transition_advances_one_step(self):
         self.client.post(reverse('patient_set_status', args=[self.p1.pk]))

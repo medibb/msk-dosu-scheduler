@@ -15,9 +15,8 @@
   <table class="list" style="max-width:560px;">
     <tr><th style="width:130px;">등록번호</th><td>{{ patient.registration_number }}</td></tr>
     <tr><th>나이/성별</th><td>{{ patient.age|default:'-' }} / {{ patient.sex|default:'-' }}</td></tr>
-    <tr><th>처방</th><td>{{ patient.get_prescription_code_display }}{% if patient.is_outpatient %} 외{% endif %} ({{ patient.prescription_date|date:'Y-m-d'|default:'-' }})</td></tr>
+    <tr><th>부위/단계</th><td>{{ patient.category_label|default:'-' }} ({{ patient.prescription_date|date:'Y-m-d'|default:'-' }})</td></tr>
     <tr><th>메모</th><td>{{ patient.memo|default:'-' }}</td></tr>
-    <tr><th>진료과</th><td>{{ patient.department }}</td></tr>
     <tr><th>담당치료사</th><td>{{ patient.therapist.name|default:'-' }}</td></tr>
     <tr><th>회차</th><td>{{ patient.session_count }} / {{ patient.target_sessions }}회</td></tr>
     <tr><th>종결평가 예정</th><td>{{ patient.completion_eval_date|date:'Y-m-d'|default:'-' }}</td></tr>

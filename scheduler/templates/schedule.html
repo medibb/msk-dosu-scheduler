@@ -7,9 +7,13 @@
   .grid-wrap { flex:1; overflow-x:auto; }
   table.grid { border-collapse:collapse; background:#fff; }
   table.grid th, table.grid td { border:1px solid #e5e7eb; }
-  table.grid th { background:#f9fafb; padding:6px 10px; font-size:13px; }
+  table.grid th { background:#f9fafb; padding:5px 8px; font-size:12px; }
+  table.grid th.th-day { background:#eef2ff; }
   table.grid td.timecol { background:#f9fafb; color:#6b7280; font-size:12px; padding:4px 8px; white-space:nowrap; }
-  td.cell { width:140px; height:48px; vertical-align:top; padding:3px; }
+  td.cell { width:140px; height:46px; vertical-align:top; padding:3px; }
+  td.cell.compact { width:96px; }
+  td.cell.tsep { border-left:1px solid #e5e7eb; }
+  td.cell.daysep { border-left:2px solid #c7d2fe; }
   td.cell.dragover { background:#dbeafe; outline:2px dashed #2563eb; }
   .card { background:#eff6ff; border:1px solid #bfdbfe; border-radius:6px; padding:4px 6px;
           font-size:13px; cursor:grab; user-select:none; }
@@ -22,57 +26,139 @@
               border:1px solid #e5e7eb; border-radius:8px; padding:8px; }
   #waitlist.dragover { background:#dbeafe; }
   #waitlist .card { margin-bottom:6px; }
-  .therapist-tabs { display:flex; gap:6px; margin-bottom:12px; }
+  .waitdays { display:inline-block; font-size:11px; color:#b45309; background:#fef3c7;
+              border-radius:8px; padding:0 6px; margin-left:4px; }
+  .therapist-tabs { display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap; }
   .therapist-tabs a { padding:6px 14px; border:1px solid #d1d5db; border-radius:20px;
                       text-decoration:none; color:#374151; font-size:14px; }
   .therapist-tabs a.active { background:#2563eb; color:#fff; border-color:#2563eb; }
+  /* 예약 대기칸 */
+  .resv-block { margin-bottom:16px; }
+  .resv-block h3 { font-size:14px; margin:0 0 8px; }
+  table.resv { border-collapse:collapse; background:#fff; width:100%; }
+  table.resv th, table.resv td { border:1px solid #e5e7eb; font-size:12px; }
+  table.resv th { background:#f9fafb; padding:5px 8px; }
+  table.resv td.periodcol { background:#f9fafb; color:#6b7280; padding:4px 8px; white-space:nowrap; width:48px; text-align:center; }
+  td.resv-cell { vertical-align:top; padding:4px; min-width:120px; height:40px; }
+  td.resv-cell.dragover { background:#dbeafe; outline:2px dashed #2563eb; }
+  td.resv-cell .card { background:#f0fdf4; border-color:#bbf7d0; margin-bottom:4px; }
 </style>
 {% endblock %}
 {% block content %}
   <h2>주간 시간표</h2>
   {% if no_therapist %}
-    <p style="color:#6b7280;">먼저 치료사를 등록하세요.</p>
+    <p style="color:#6b7280;">먼저 <a href="{% url 'therapists' %}">치료사</a>를 등록하세요.</p>
   {% else %}
   <div class="therapist-tabs">
+    <a href="{% url 'schedule' %}" class="{% if view == 'all' %}active{% endif %}">전체</a>
     {% for t in therapists %}
-      <a href="?therapist={{ t.id }}" class="{% if t.id == current.id %}active{% endif %}">{{ t.name }}</a>
+      <a href="?therapist={{ t.id }}" class="{% if view == 'single' and t.id == current.id %}active{% endif %}">{{ t.name }}</a>
     {% endfor %}
   </div>
 
   <div class="sched-layout"
-       data-therapist-id="{{ current.id }}"
        data-place-url="{% url 'api_place' %}"
        data-unassign-url="{% url 'api_unassign' %}"
+       data-reserve-url="{% url 'api_reserve' %}"
+       data-unreserve-url="{% url 'api_unreserve' %}"
        data-fixed-url="{% url 'api_toggle_fixed' %}">
     <div class="grid-wrap">
-      <table class="grid">
-        <thead>
-          <tr><th>시간</th>{% for d in weekdays %}<th>{{ d }}</th>{% endfor %}</tr>
-        </thead>
-        <tbody>
-          {% for row in grid %}
-            <tr>
-              <td class="timecol">{{ row.slot.start }}<br>~{{ row.slot.end }}</td>
-              {% for cell in row.cells %}
-                <td class="cell" data-weekday="{{ cell.weekday }}" data-slot="{{ cell.slot_index }}">
-                  {% with a=cell.appointment %}
-                    {% if a %}
-                      <div class="card{% if a.is_fixed %} fixed{% endif %}" draggable="true"
-                           data-patient-id="{{ a.patient.id }}" data-appointment-id="{{ a.id }}"
-                           title="더블클릭: 스케줄 고정 토글">
-                        <div class="nm">{{ a.patient.name }}</div>
-                        <div class="meta">{{ a.patient.memo|truncatechars:14 }} · {{ a.patient.session_count }}/{{ a.patient.target_sessions }}</div>
+
+      <!-- 예약 대기칸: 요일×오전/오후 -->
+      <div class="resv-block">
+        <h3>예약 대기 <span style="color:#6b7280; font-weight:400; font-size:12px;">(자리 나면 다음으로 시작할 환자)</span></h3>
+        <table class="resv">
+          <thead>
+            <tr><th></th>{% for d in weekdays %}<th>{{ d }}</th>{% endfor %}</tr>
+          </thead>
+          <tbody>
+            {% for row in reservation_rows %}
+              <tr>
+                <td class="periodcol">{{ row.label }}</td>
+                {% for cell in row.cells %}
+                  <td class="resv-cell" data-reserve="1" data-weekday="{{ cell.weekday }}" data-period="{{ cell.period }}">
+                    {% for r in cell.reservations %}
+                      <div class="card" draggable="true"
+                           data-patient-id="{{ r.patient.id }}" data-reserved="1">
+                        <div class="nm">{{ r.patient.name }}</div>
+                        <div class="meta">{{ r.patient.category_label|default:r.patient.memo|truncatechars:14 }}</div>
                       </div>
-                    {% endif %}
-                  {% endwith %}
-                </td>
-              {% endfor %}
+                    {% endfor %}
+                  </td>
+                {% endfor %}
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 주간 시간표 -->
+      {% if view == 'all' %}
+        {% with ncols=therapists|length %}
+        <table class="grid">
+          <thead>
+            <tr>
+              <th rowspan="2">시간</th>
+              {% for d in weekdays %}<th class="th-day" colspan="{{ ncols }}">{{ d }}</th>{% endfor %}
             </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+            <tr>
+              {% for d in weekdays %}{% for t in therapists %}<th>{{ t.name }}</th>{% endfor %}{% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in grid_all %}
+              <tr>
+                <td class="timecol">{{ row.slot.start }}<br>~{{ row.slot.end }}</td>
+                {% for cell in row.cells %}
+                  <td class="cell compact{% if forloop.counter0|divisibleby:ncols %} daysep{% else %} tsep{% endif %}"
+                      data-therapist="{{ cell.therapist.id }}" data-weekday="{{ cell.weekday }}" data-slot="{{ cell.slot_index }}">
+                    {% with a=cell.appointment %}
+                      {% if a %}
+                        <div class="card{% if a.is_fixed %} fixed{% endif %}" draggable="true"
+                             data-patient-id="{{ a.patient.id }}" data-appointment-id="{{ a.id }}"
+                             title="더블클릭: 스케줄 고정 토글">
+                          <div class="nm">{{ a.patient.name }}</div>
+                          <div class="meta">{{ a.patient.session_count }}/{{ a.patient.target_sessions }}</div>
+                        </div>
+                      {% endif %}
+                    {% endwith %}
+                  </td>
+                {% endfor %}
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% endwith %}
+      {% else %}
+        <table class="grid">
+          <thead>
+            <tr><th>시간</th>{% for d in weekdays %}<th>{{ d }}</th>{% endfor %}</tr>
+          </thead>
+          <tbody>
+            {% for row in grid %}
+              <tr>
+                <td class="timecol">{{ row.slot.start }}<br>~{{ row.slot.end }}</td>
+                {% for cell in row.cells %}
+                  <td class="cell" data-therapist="{{ current.id }}" data-weekday="{{ cell.weekday }}" data-slot="{{ cell.slot_index }}">
+                    {% with a=cell.appointment %}
+                      {% if a %}
+                        <div class="card{% if a.is_fixed %} fixed{% endif %}" draggable="true"
+                             data-patient-id="{{ a.patient.id }}" data-appointment-id="{{ a.id }}"
+                             title="더블클릭: 스케줄 고정 토글">
+                          <div class="nm">{{ a.patient.name }}</div>
+                          <div class="meta">{{ a.patient.category_label|default:a.patient.memo|truncatechars:14 }} · {{ a.patient.session_count }}/{{ a.patient.target_sessions }}</div>
+                        </div>
+                      {% endif %}
+                    {% endwith %}
+                  </td>
+                {% endfor %}
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% endif %}
       <p style="color:#6b7280; font-size:13px; margin-top:8px;">
-        카드를 끌어 칸에 배정하거나 대기자로 되돌릴 수 있습니다. 노란 카드 = 스케줄 고정(더블클릭 토글).
+        대기자/예약대기 카드를 끌어 시간표 칸에 배정(→시행중)하거나 되돌릴 수 있습니다. 노란 카드 = 스케줄 고정(더블클릭 토글).
       </p>
     </div>
 
@@ -81,8 +167,8 @@
       <div id="waitlist">
         {% for p in waitlist %}
           <div class="card" draggable="true" data-patient-id="{{ p.id }}">
-            <div class="nm">{{ p.name }}</div>
-            <div class="meta">{{ p.memo|truncatechars:16 }}</div>
+            <div class="nm">{{ p.name }}<span class="waitdays">{{ p.wait_days }}일</span></div>
+            <div class="meta">{{ p.category_label|default:p.memo|truncatechars:16 }}</div>
           </div>
         {% empty %}
           <div style="color:#9ca3af; font-size:13px;">대기 환자가 없습니다.</div>

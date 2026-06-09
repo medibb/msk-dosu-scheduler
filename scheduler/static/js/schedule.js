@@ -1,12 +1,14 @@
 // 주간 시간표 드래그앤드롭 (네이티브 HTML5 DnD, 외부 라이브러리 없음)
+// 드롭 대상 3종: 시간표 칸(td.cell) / 예약 대기칸(td.resv-cell) / 대기자(#waitlist)
 (function () {
   const layout = document.querySelector('.sched-layout');
   if (!layout) return;
 
-  const therapistId = layout.dataset.therapistId;
   const URLS = {
     place: layout.dataset.placeUrl,
     unassign: layout.dataset.unassignUrl,
+    reserve: layout.dataset.reserveUrl,
+    unreserve: layout.dataset.unreserveUrl,
     fixed: layout.dataset.fixedUrl,
   };
 
@@ -36,9 +38,8 @@
 
   function markOver(el, on) { el.classList.toggle('dragover', on); }
 
-  // 드롭 타깃: 그리드 칸과 대기자 패널
   function bindDropTargets() {
-    document.querySelectorAll('td.cell, #waitlist').forEach(function (zone) {
+    document.querySelectorAll('td.cell, td.resv-cell, #waitlist').forEach(function (zone) {
       zone.addEventListener('dragover', function (e) { e.preventDefault(); markOver(zone, true); });
       zone.addEventListener('dragleave', function () { markOver(zone, false); });
       zone.addEventListener('drop', function (e) { e.preventDefault(); markOver(zone, false); onDrop(zone); });
@@ -50,31 +51,55 @@
     const card = dragged;
     dragged = null;
 
+    // 1) 대기자로 복귀(배정 해제 / 예약 해제)
     if (zone.id === 'waitlist') {
-      // 그리드 → 대기자(배정 해제)
-      const apptId = card.dataset.appointmentId;
-      if (!apptId) { zone.appendChild(card); return; }  // 대기자끼리 이동
-      const r = await post(URLS.unassign, { appointment_id: apptId });
-      if (r.ok) {
+      if (card.dataset.appointmentId) {
+        const r = await post(URLS.unassign, { appointment_id: card.dataset.appointmentId });
+        if (!r.ok) { alert('해제 실패'); return; }
         delete card.dataset.appointmentId;
         card.classList.remove('fixed');
-        zone.appendChild(card);
-      } else { alert('해제 실패'); }
+      } else if (card.dataset.reserved) {
+        const r = await post(URLS.unreserve, { patient_id: card.dataset.patientId });
+        if (!r.ok) { alert('예약 해제 실패'); return; }
+        delete card.dataset.reserved;
+      }
+      zone.appendChild(card);
       return;
     }
 
-    // 칸이 이미 차 있으면 거부
-    if (zone.querySelector('.card')) { alert('이미 배정된 시간대입니다.'); return; }
+    // 2) 예약 대기칸에 넣기(여러 명 가능 → 점유 검사 없음)
+    if (zone.dataset.reserve) {
+      // 시간표에 배정돼 있던 카드면 먼저 배정 해제
+      if (card.dataset.appointmentId) {
+        const u = await post(URLS.unassign, { appointment_id: card.dataset.appointmentId });
+        if (!u.ok) { alert('이동 실패'); return; }
+        delete card.dataset.appointmentId;
+      }
+      const r = await post(URLS.reserve, {
+        patient_id: card.dataset.patientId,
+        weekday: zone.dataset.weekday,
+        period: zone.dataset.period,
+      });
+      if (r.ok && r.data.ok) {
+        card.dataset.reserved = '1';
+        card.classList.remove('fixed');
+        zone.appendChild(card);
+      } else { alert(r.data.error || '예약 실패'); }
+      return;
+    }
 
+    // 3) 시간표 칸에 배정(→ 시행중). 칸이 차 있으면 거부.
+    if (zone.querySelector('.card')) { alert('이미 배정된 시간대입니다.'); return; }
     const r = await post(URLS.place, {
       patient_id: card.dataset.patientId,
-      therapist_id: therapistId,
+      therapist_id: zone.dataset.therapist,
       weekday: zone.dataset.weekday,
       slot_index: zone.dataset.slot,
       appointment_id: card.dataset.appointmentId || null,
     });
     if (r.ok && r.data.ok) {
       card.dataset.appointmentId = r.data.card.appointment_id;
+      delete card.dataset.reserved;
       zone.appendChild(card);
     } else {
       alert(r.data.error || '배정 실패');

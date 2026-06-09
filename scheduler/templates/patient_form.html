@@ -14,4 +14,16 @@
     <button class="btn btn-primary" type="submit">저장</button>
     <a class="btn" href="{% url 'waitlist' %}">취소</a>
   </form>
+  <script>
+    // 부위/단계에서 '기타'를 골랐을 때만 직접입력 칸을 보여준다.
+    (function () {
+      var cat = document.getElementById('id_category');
+      var etc = document.getElementById('id_category_etc');
+      if (!cat || !etc) return;
+      var wrap = etc.closest('.field');
+      function sync() { wrap.style.display = (cat.value === 'etc') ? '' : 'none'; }
+      cat.addEventListener('change', sync);
+      sync();
+    })();
+  </script>
 {% endblock %}

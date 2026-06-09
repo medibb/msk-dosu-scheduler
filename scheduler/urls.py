@@ -18,6 +18,8 @@ urlpatterns = [
 
     path('api/place/', views.api_place, name='api_place'),
     path('api/unassign/', views.api_unassign, name='api_unassign'),
+    path('api/reserve/', views.api_reserve, name='api_reserve'),
+    path('api/unreserve/', views.api_unreserve, name='api_unreserve'),
     path('api/toggle-fixed/', views.api_toggle_fixed, name='api_toggle_fixed'),
 
     path('therapists/', views.therapists, name='therapists'),
